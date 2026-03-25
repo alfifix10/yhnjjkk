@@ -22,8 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderTrends('all', trendsData);
     renderArticles(articlesData);
 
-    // محاولة الاتصال بالـ Backend في الخلفية
-    showLoadingBanner('جاري الاتصال بالخادم... قد يستغرق 30-60 ثانية في المرة الأولى');
+    // اتصال بالخادم في الخلفية بصمت
     connectToBackend();
 });
 
@@ -69,22 +68,18 @@ async function connectToBackend() {
                 backendAvailable = true;
                 console.log('✅ Backend متصل', data);
 
-                showLoadingBanner('جاري تحميل الترندات الحقيقية...');
                 await loadLiveTrends();
                 await loadLiveArticles();
-                showSuccessBanner(`تم تحميل ${liveTrends.length} ترند و ${liveArticles.length} مقال من الخادم`);
                 return;
             }
         } catch (e) {
             console.log(`محاولة ${attempt}/3 فشلت:`, e.message);
             if (attempt < 3) {
-                showLoadingBanner(`جاري إيقاظ الخادم... محاولة ${attempt + 1}/3`);
                 await sleep(5000);
             }
         }
     }
 
-    hideLoadingBanner();
     console.log('ℹ️ تعذر الاتصال بالخادم - البيانات المحلية مُعروضة');
 }
 
