@@ -1,14 +1,9 @@
 // ========================================
 // TrendScope - Main Application
-// يتصل بالـ Backend API أو يستخدم البيانات المحلية كاحتياط
+// يتصل بالـ Backend API مع مؤشر تحميل
 // ========================================
 
-// ضع رابط Render هنا بعد النشر، مثال: https://trendscope-api.onrender.com
-const RENDER_URL = 'https://yhnjjkk.onrender.com';
-
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8000'
-    : RENDER_URL;
+const API_BASE = 'https://yhnjjkk.onrender.com';
 
 let liveTrends = [];
 let liveArticles = [];
@@ -23,33 +18,77 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAnalyzer();
     duplicateTicker();
 
-    // محاولة الاتصال بالـ Backend
-    await checkBackend();
+    // عرض البيانات المحلية فوراً كاحتياط
+    renderTrends('all', trendsData);
+    renderArticles(articlesData);
 
-    if (backendAvailable) {
-        await loadLiveTrends();
-        await loadLiveArticles();
-    } else {
-        // استخدام البيانات المحلية كاحتياط
-        renderTrends('all', trendsData);
-        renderArticles(articlesData);
-    }
+    // محاولة الاتصال بالـ Backend في الخلفية
+    showLoadingBanner('جاري الاتصال بالخادم... قد يستغرق 30-60 ثانية في المرة الأولى');
+    connectToBackend();
 });
 
-// ---- Backend Connection ----
-async function checkBackend() {
-    try {
-        const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(3000) });
-        if (res.ok) {
-            const data = await res.json();
-            backendAvailable = true;
-            console.log('✅ Backend متصل', data);
-        }
-    } catch {
-        backendAvailable = false;
-        console.log('ℹ️ Backend غير متوفر - استخدام البيانات المحلية');
+// ---- Loading Banner ----
+function showLoadingBanner(msg) {
+    let banner = document.getElementById('loadingBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'loadingBanner';
+        banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#fe2c55,#25f4ee);color:white;padding:12px 28px;border-radius:50px;font-family:Cairo;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;align-items:center;gap:10px;direction:rtl;';
+        document.body.appendChild(banner);
     }
+    banner.innerHTML = `<span style="display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite"></span> ${msg}`;
+    banner.style.display = 'flex';
 }
+
+function hideLoadingBanner() {
+    const banner = document.getElementById('loadingBanner');
+    if (banner) banner.style.display = 'none';
+}
+
+function showSuccessBanner(msg) {
+    let banner = document.getElementById('loadingBanner');
+    if (!banner) return;
+    banner.innerHTML = `✅ ${msg}`;
+    banner.style.background = 'linear-gradient(135deg, #00c853, #00897b)';
+    setTimeout(() => { banner.style.display = 'none'; }, 3000);
+}
+
+// ---- Backend Connection (مع إعادة المحاولة) ----
+async function connectToBackend() {
+    // Render المجاني ينام بعد عدم النشاط - يحتاج وقت للاستيقاظ
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 90000); // 90 ثانية
+
+            const res = await fetch(`${API_BASE}/api/health`, { signal: controller.signal });
+            clearTimeout(timeout);
+
+            if (res.ok) {
+                const data = await res.json();
+                backendAvailable = true;
+                console.log('✅ Backend متصل', data);
+
+                showLoadingBanner('جاري تحميل الترندات الحقيقية...');
+                await loadLiveTrends();
+                await loadLiveArticles();
+                showSuccessBanner(`تم تحميل ${liveTrends.length} ترند و ${liveArticles.length} مقال من الخادم`);
+                return;
+            }
+        } catch (e) {
+            console.log(`محاولة ${attempt}/3 فشلت:`, e.message);
+            if (attempt < 3) {
+                showLoadingBanner(`جاري إيقاظ الخادم... محاولة ${attempt + 1}/3`);
+                await sleep(5000);
+            }
+        }
+    }
+
+    hideLoadingBanner();
+    console.log('ℹ️ تعذر الاتصال بالخادم - البيانات المحلية مُعروضة');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function loadLiveTrends(category = 'all') {
     try {
@@ -59,12 +98,10 @@ async function loadLiveTrends(category = 'all') {
             liveTrends = json.data;
             renderTrends('all', liveTrends);
             updateTicker(liveTrends);
-            return;
         }
     } catch (e) {
         console.log('خطأ في جلب الترندات:', e);
     }
-    renderTrends('all', trendsData);
 }
 
 async function loadLiveArticles() {
@@ -74,12 +111,10 @@ async function loadLiveArticles() {
         if (json.success && json.data.length > 0) {
             liveArticles = json.data;
             renderArticles(liveArticles);
-            return;
         }
     } catch (e) {
         console.log('خطأ في جلب المقالات:', e);
     }
-    renderArticles(articlesData);
 }
 
 function updateTicker(trends) {
@@ -88,7 +123,7 @@ function updateTicker(trends) {
     trends.slice(0, 10).forEach(t => {
         ticker.innerHTML += `<span class="ticker-item">${t.hashtag} <em>${t.views}</em></span>`;
     });
-    ticker.innerHTML += ticker.innerHTML; // تكرار للحركة
+    ticker.innerHTML += ticker.innerHTML;
 }
 
 // ---- Particles Background ----
@@ -169,7 +204,7 @@ function renderTrends(filter = 'all', data = null) {
     const grid = document.getElementById('trendsGrid');
     grid.innerHTML = '';
 
-    const source = data || liveTrends.length > 0 ? liveTrends : trendsData;
+    const source = data || (liveTrends.length > 0 ? liveTrends : trendsData);
     const filtered = filter === 'all'
         ? source
         : source.filter(t => t.category === filter);
@@ -179,7 +214,6 @@ function renderTrends(filter = 'all', data = null) {
         card.className = 'trend-card';
         card.style.animationDelay = (i * 0.1) + 's';
 
-        // دعم كلا التنسيقين (backend snake_case و frontend camelCase)
         const catLabel = trend.category_label || trend.categoryLabel || trend.category;
         const growthUp = trend.growth_up !== undefined ? trend.growth_up : trend.growthUp;
 
@@ -218,8 +252,11 @@ function initFilters() {
             tab.classList.add('active');
             const filter = tab.dataset.filter;
 
-            if (backendAvailable) {
-                await loadLiveTrends(filter);
+            if (backendAvailable && liveTrends.length > 0) {
+                const filtered = filter === 'all'
+                    ? liveTrends
+                    : liveTrends.filter(t => t.category === filter);
+                renderTrends('all', filtered);
             } else {
                 renderTrends(filter, trendsData);
             }
@@ -243,7 +280,6 @@ function renderArticles(articles) {
         card.className = 'article-card';
         card.style.animationDelay = (i * 0.1) + 's';
 
-        // دعم كلا التنسيقين
         const readTime = article.read_time || article.readTime || '5 دقائق';
         const date = article.created_at ? timeAgo(article.created_at) : (article.date || 'حديث');
         const emoji = article.emoji || '📝';
@@ -343,11 +379,9 @@ function initAnalyzer() {
         btnLoader.style.display = 'block';
         btn.disabled = true;
 
-        if (backendAvailable) {
-            await analyzeViaBackend(topic);
-        } else {
-            // تأخير وهمي + بيانات محلية
-            await new Promise(r => setTimeout(r, 1500));
+        // دائماً نحاول الـ Backend أولاً
+        const success = await analyzeViaBackend(topic);
+        if (!success) {
             generateLocalAnalysis(topic);
         }
 
@@ -370,11 +404,17 @@ function initAnalyzer() {
 
 async function analyzeViaBackend(topic) {
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120000); // دقيقتين
+
         const res = await fetch(`${API_BASE}/api/analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ topic }),
+            signal: controller.signal,
         });
+        clearTimeout(timeout);
+
         const json = await res.json();
 
         if (json.success) {
@@ -391,12 +431,12 @@ async function analyzeViaBackend(topic) {
             document.getElementById('generatedArticle').innerHTML = d.article;
 
             result.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
+            return true;
         }
     } catch (e) {
         console.log('خطأ في التحليل عبر Backend:', e);
     }
-    generateLocalAnalysis(topic);
+    return false;
 }
 
 function renderInsights(insights) {
@@ -451,7 +491,6 @@ function drawChart(topic, apiData = null) {
 
     ctx.clearRect(0, 0, w, h);
 
-    // بيانات من الـ API أو محلية
     const days = 14;
     let data;
     if (apiData && apiData.length === days) {
@@ -470,7 +509,6 @@ function drawChart(topic, apiData = null) {
 
     const maxVal = Math.max(...data) * 1.1;
 
-    // Grid lines
     ctx.strokeStyle = 'rgba(255,255,255,0.05)';
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
@@ -481,7 +519,6 @@ function drawChart(topic, apiData = null) {
         ctx.stroke();
     }
 
-    // Gradient area
     const gradient = ctx.createLinearGradient(0, padding, 0, h - padding);
     gradient.addColorStop(0, 'rgba(254, 44, 85, 0.3)');
     gradient.addColorStop(1, 'rgba(254, 44, 85, 0)');
@@ -504,7 +541,6 @@ function drawChart(topic, apiData = null) {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Line
     ctx.beginPath();
     data.forEach((val, i) => {
         const x = padding + (chartW / (days - 1)) * i;
@@ -521,7 +557,6 @@ function drawChart(topic, apiData = null) {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Dots
     data.forEach((val, i) => {
         const x = padding + (chartW / (days - 1)) * i;
         const y = h - padding - (val / maxVal) * chartH;
@@ -534,7 +569,6 @@ function drawChart(topic, apiData = null) {
         ctx.stroke();
     });
 
-    // Labels
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.font = '11px Cairo';
     ctx.textAlign = 'center';
@@ -547,7 +581,7 @@ function drawChart(topic, apiData = null) {
     });
 }
 
-// ---- Local Fallback: Insights ----
+// ---- Local Fallbacks ----
 function generateLocalInsights(topic) {
     const container = document.getElementById('insightsList');
     container.innerHTML = '';
@@ -580,16 +614,11 @@ function generateLocalInsights(topic) {
     });
 }
 
-// ---- Local Fallback: Article ----
 function generateLocalArticle(topic) {
     const container = document.getElementById('generatedArticle');
     const template = analysisTemplates.articleTemplates[0];
-
     let html = `<p>${template.intro.replace('{topic}', topic)}</p>`;
-    template.body.forEach(section => {
-        html += section;
-    });
-
+    template.body.forEach(section => { html += section; });
     container.innerHTML = html;
 }
 
