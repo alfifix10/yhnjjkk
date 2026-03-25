@@ -2,324 +2,91 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FadayehScope - كاشف الفضائح والأسرار</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>جيرانك - دردش مع اللي حولك</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- Particles Background -->
+    <!-- Particles -->
     <div id="particles"></div>
 
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="logo">
-                <span class="logo-icon">&#9835;</span>
-                <span class="logo-text">FadayehScope</span>
+    <!-- Screen 1: Landing -->
+    <div id="landingScreen" class="screen active">
+        <div class="screen-content">
+            <div class="logo-big">🏘️</div>
+            <h1 class="title">جيرانك</h1>
+            <p class="subtitle">دردش مع الناس اللي حولك - مجهول ومؤقت</p>
+            <div class="features-mini">
+                <span>🔒 مجهول تماماً</span>
+                <span>💨 ينحذف كل شي بعد خروجك</span>
+                <span>📍 ناس قريبين منك فعلاً</span>
             </div>
-            <ul class="nav-links">
-                <li><a href="#home" class="active">الرئيسية</a></li>
-                <li><a href="#trends">الترندات</a></li>
-                <li><a href="#articles">المقالات</a></li>
-                <li><a href="#analyzer">المحلل</a></li>
-                <li><a href="#about">حول</a></li>
-            </ul>
-            <button class="menu-toggle" id="menuToggle">
-                <span></span><span></span><span></span>
+            <div class="input-group">
+                <input type="text" id="nicknameInput" placeholder="اكتب اسم مستعار..." maxlength="20" autocomplete="off">
+                <button id="joinBtn" class="btn-primary">ادخل</button>
+            </div>
+            <div class="random-names">
+                <span>أو اختر:</span>
+                <button class="name-chip" data-name="الجار الفضولي">الجار الفضولي</button>
+                <button class="name-chip" data-name="أبو القطط">أبو القطط</button>
+                <button class="name-chip" data-name="بنت الحارة">بنت الحارة</button>
+                <button class="name-chip" data-name="الجار الطيب">الجار الطيب</button>
+                <button class="name-chip" data-name="مجهول">مجهول</button>
+            </div>
+            <p class="note">📍 سنطلب إذن الموقع لنعرض لك جيرانك فقط</p>
+        </div>
+    </div>
+
+    <!-- Screen 2: Nearby People -->
+    <div id="peopleScreen" class="screen">
+        <div class="topbar">
+            <button id="backToLanding" class="back-btn">✕</button>
+            <div class="topbar-info">
+                <span id="myName" class="my-name"></span>
+                <span id="onlineCount" class="online-badge">0 جار متصل</span>
+            </div>
+            <div class="pulse-dot"></div>
+        </div>
+        <div class="screen-content people-content">
+            <h2>الجيران المتصلين الآن</h2>
+            <p class="hint">اختر شخص وابدأ الدردشة</p>
+            <div id="peopleList" class="people-list">
+                <!-- يتم إضافتها ديناميكياً -->
+            </div>
+            <div id="noPeople" class="no-people" style="display:none">
+                <div class="empty-icon">👀</div>
+                <p>ما فيه أحد قريب منك الآن</p>
+                <p class="hint">شارك الرابط مع جيرانك!</p>
+                <button id="shareBtn" class="btn-secondary">📤 شارك الرابط</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 3: Chat -->
+    <div id="chatScreen" class="screen">
+        <div class="topbar chat-topbar">
+            <button id="backToPeople" class="back-btn">→</button>
+            <div class="topbar-info">
+                <span id="chatWith" class="chat-with-name"></span>
+                <span id="chatDistance" class="distance-badge"></span>
+            </div>
+            <div class="ephemeral-badge">💨 مؤقت</div>
+        </div>
+        <div id="chatMessages" class="chat-messages">
+            <!-- الرسائل -->
+        </div>
+        <div class="chat-input-bar">
+            <input type="text" id="msgInput" placeholder="اكتب رسالة..." autocomplete="off">
+            <button id="sendBtn" class="send-btn">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
         </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section id="home" class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">🔥 كاشف الفضائح والأسرار</div>
-            <h1 class="hero-title">
-                اكتشف <span class="gradient-text">الفضائح والأسرار</span>
-                <br>التي يخفونها عنك
-            </h1>
-            <p class="hero-subtitle">
-                نكشف فضائح المشاهير، التسريبات الصادمة، والأسرار التي لا يريدك أحد أن تعرفها. كل يوم فضيحة جديدة.
-            </p>
-            <div class="hero-actions">
-                <a href="#trends" class="btn btn-primary">
-                    <span>اكتشف الترندات</span>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 12H5M12 19l-7-7 7-7"/>
-                    </svg>
-                </a>
-                <a href="#analyzer" class="btn btn-secondary">
-                    <span>حلل موضوعاً</span>
-                </a>
-            </div>
-            <div class="hero-stats">
-                <div class="stat-item">
-                    <span class="stat-number" data-target="1247">0</span>
-                    <span class="stat-label">ترند محلل</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number" data-target="368">0</span>
-                    <span class="stat-label">مقال حصري</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number" data-target="52">0</span>
-                    <span class="stat-label">حقيقة مكتشفة يومياً</span>
-                </div>
-            </div>
-        </div>
-        <div class="hero-visual">
-            <div class="phone-mockup">
-                <div class="phone-screen">
-                    <div class="tiktok-feed">
-                        <div class="feed-item active">
-                            <div class="feed-overlay">
-                                <span class="trending-badge">&#128293; ترند #1</span>
-                                <h3>التحدي الجديد يجتاح العالم</h3>
-                                <p>45.2M مشاهدة</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Live Trends Ticker -->
-    <div class="trends-ticker">
-        <div class="ticker-label">🔴 فضائح الآن</div>
-        <div class="ticker-wrapper">
-            <div class="ticker-content" id="tickerContent">
-                <span class="ticker-item">#تحدي_الرقص_الجديد <em>12.5M</em></span>
-                <span class="ticker-item">#اسرار_لا_تعرفها <em>8.3M</em></span>
-                <span class="ticker-item">#حقائق_صادمة <em>15.1M</em></span>
-                <span class="ticker-item">#الذكاء_الاصطناعي <em>22.7M</em></span>
-                <span class="ticker-item">#وصفات_سهلة <em>9.8M</em></span>
-                <span class="ticker-item">#تجارب_علمية <em>6.4M</em></span>
-                <span class="ticker-item">#اكتشافات_2026 <em>18.9M</em></span>
-                <span class="ticker-item">#نصائح_حياتية <em>11.2M</em></span>
-            </div>
-        </div>
     </div>
 
-    <!-- Trending Topics Section -->
-    <section id="trends" class="section trends-section">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-tag">🔴 عاجل</span>
-                <h2 class="section-title">أسخن <span class="gradient-text">الفضائح</span> الآن</h2>
-                <p class="section-desc">فضائح وأسرار المشاهير والتيكتوكرز - تحديث مباشر</p>
-            </div>
-
-            <!-- Filter Tabs -->
-            <div class="filter-tabs">
-                <button class="filter-tab active" data-filter="all">🔥 الكل</button>
-                <button class="filter-tab" data-filter="scandals">فضائح</button>
-            </div>
-
-            <!-- Trends Grid -->
-            <div class="trends-grid" id="trendsGrid">
-                <!-- Cards will be dynamically inserted -->
-            </div>
-
-            <div class="load-more">
-                <button class="btn btn-outline" id="loadMoreTrends">تحميل المزيد</button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Featured Articles Section -->
-    <section id="articles" class="section articles-section">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-tag">مقالات حصرية</span>
-                <h2 class="section-title">تحقيقات <span class="gradient-text">كاشفة</span> وصادمة</h2>
-                <p class="section-desc">مقالات تكشف القصة الحقيقية وراء كل حدث ساخن - ما لا يريدونك أن تعرفه</p>
-            </div>
-
-            <div class="articles-grid" id="articlesGrid">
-                <!-- Articles will be dynamically inserted -->
-            </div>
-        </div>
-    </section>
-
-    <!-- Article Modal -->
-    <div class="modal-overlay" id="articleModal">
-        <div class="modal-content">
-            <button class="modal-close" id="closeModal">&times;</button>
-            <div class="modal-body" id="modalBody">
-                <!-- Article content will be inserted here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Analyzer Section -->
-    <section id="analyzer" class="section analyzer-section">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-tag">🔍 حقق بنفسك</span>
-                <h2 class="section-title">اكشف أي <span class="gradient-text">فضيحة</span> بنفسك</h2>
-                <p class="section-desc">اكتب اسم أي مشهور أو حدث وسنكشف لك الحقيقة الكاملة</p>
-            </div>
-
-            <div class="analyzer-box">
-                <div class="analyzer-input-group">
-                    <input type="text" id="analyzerInput" class="analyzer-input" placeholder="اكتب اسم مشهور أو حدث... مثال: فضيحة تيكتوكر">
-                    <button class="btn btn-primary analyzer-btn" id="analyzeBtn">
-                        <span>حلل الآن</span>
-                        <div class="btn-loader" style="display:none"></div>
-                    </button>
-                </div>
-
-                <div class="analyzer-suggestions">
-                    <span>اقتراحات:</span>
-                    <button class="suggestion-chip" data-topic="فضائح تيكتوكرز العرب">فضائح تيكتوكرز</button>
-                    <button class="suggestion-chip" data-topic="تسريبات مشاهير">تسريبات مشاهير</button>
-                    <button class="suggestion-chip" data-topic="تحديات خطيرة على تيك توك">تحديات خطيرة</button>
-                    <button class="suggestion-chip" data-topic="نصب واحتيال المشاهير">نصب المشاهير</button>
-                </div>
-
-                <!-- Analysis Result -->
-                <div class="analysis-result" id="analysisResult" style="display:none">
-                    <div class="result-header">
-                        <h3 id="resultTitle"></h3>
-                        <div class="result-meta">
-                            <span class="result-views" id="resultViews"></span>
-                            <span class="result-trend" id="resultTrend"></span>
-                        </div>
-                    </div>
-
-                    <div class="result-chart">
-                        <h4>مؤشر الانتشار</h4>
-                        <canvas id="trendChart" width="600" height="250"></canvas>
-                    </div>
-
-                    <div class="result-insights">
-                        <h4>الحقائق المكتشفة</h4>
-                        <div id="insightsList"></div>
-                    </div>
-
-                    <div class="result-article">
-                        <h4>المقال التحليلي</h4>
-                        <div id="generatedArticle" class="generated-article"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="about" class="section about-section">
-        <div class="container">
-            <div class="about-grid">
-                <div class="about-content">
-                    <span class="section-tag">من نحن</span>
-                    <h2 class="section-title">نكشف ما <span class="gradient-text">يخفيه</span> الترند</h2>
-                    <p>FadayehScope يكشف الفضائح والأسرار المخفية باستخدام الذكاء الاصطناعي وتحليل البيانات من مصادر متعددة. نجد ما يحاولون إخفاءه.</p>
-                    <div class="features-list">
-                        <div class="feature-item">
-                            <div class="feature-icon">&#128269;</div>
-                            <div>
-                                <h4>تحليل عميق</h4>
-                                <p>نحلل ملايين الفيديوهات لاكتشاف الأنماط المخفية</p>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">&#9889;</div>
-                            <div>
-                                <h4>تحديث فوري</h4>
-                                <p>نتابع الترندات لحظة بلحظة ونكتشفها قبل الجميع</p>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">&#128218;</div>
-                            <div>
-                                <h4>مقالات حصرية</h4>
-                                <p>نكتب مقالات تكشف حقائق لا يعرفها 99% من الناس</p>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">&#127793;</div>
-                            <div>
-                                <h4>تنبؤ بالترندات</h4>
-                                <p>نتنبأ بالمواضيع التي ستصبح ترنداً قبل حدوثها</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="about-visual">
-                    <div class="stats-card">
-                        <div class="stats-card-header">&#128200; إحصائيات المنصة</div>
-                        <div class="stats-card-body">
-                            <div class="stat-row">
-                                <span>ترندات تم تحليلها</span>
-                                <span class="stat-value">12,847+</span>
-                            </div>
-                            <div class="stat-row">
-                                <span>مقالات منشورة</span>
-                                <span class="stat-value">3,621+</span>
-                            </div>
-                            <div class="stat-row">
-                                <span>حقائق مكتشفة</span>
-                                <span class="stat-value">28,493+</span>
-                            </div>
-                            <div class="stat-row">
-                                <span>مستخدمين نشطين</span>
-                                <span class="stat-value">156K+</span>
-                            </div>
-                            <div class="stat-row">
-                                <span>دقة التنبؤات</span>
-                                <span class="stat-value">94.7%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="logo">
-                        <span class="logo-icon">&#9835;</span>
-                        <span class="logo-text">FadayehScope</span>
-                    </div>
-                    <p>محلل ترندات تيك توك الذكي - نكشف الحقائق المخفية وراء كل ترند</p>
-                </div>
-                <div class="footer-links">
-                    <h4>روابط سريعة</h4>
-                    <a href="#home">الرئيسية</a>
-                    <a href="#trends">الترندات</a>
-                    <a href="#articles">المقالات</a>
-                    <a href="#analyzer">المحلل</a>
-                </div>
-                <div class="footer-links">
-                    <h4>التصنيفات</h4>
-                    <a href="#">ترفيه</a>
-                    <a href="#">تكنولوجيا</a>
-                    <a href="#">تعليم</a>
-                    <a href="#">صحة ولياقة</a>
-                </div>
-                <div class="footer-links">
-                    <h4>تواصل معنا</h4>
-                    <a href="#">تويتر</a>
-                    <a href="#">انستغرام</a>
-                    <a href="#">تيك توك</a>
-                    <a href="#">البريد الإلكتروني</a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 FadayehScope - جميع الحقوق محفوظة</p>
-            </div>
-        </div>
-    </footer>
-
-    <script src="js/data.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
