@@ -544,12 +544,23 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--dark-4); border-radius: 4px; }
 
 /* ---- Responsive ---- */
-@media (max-width: 480px) {
-    .title { font-size: 40px; }
-    .subtitle { font-size: 15px; }
-    .features-mini { gap: 8px; }
+@media (max-width: 768px) {
+    .logo-big { font-size: 56px; margin-bottom: 4px; }
+    .title { font-size: 34px; }
+    .subtitle { font-size: 15px; margin-bottom: 20px; }
+    .features-mini { gap: 8px; margin-bottom: 24px; }
     .features-mini span { font-size: 12px; padding: 6px 12px; }
-    .input-group { flex-direction: column; }
-    .btn-primary { width: 100%; text-align: center; }
+    .input-group { max-width: 100%; }
+    .input-group input { padding: 14px 16px; font-size: 15px; }
+    .btn-primary { padding: 14px 28px; font-size: 15px; }
+    .random-names { max-width: 100%; margin-bottom: 16px; }
+    .name-chip { font-size: 12px; padding: 5px 12px; }
     .person-card { padding: 14px; }
+    .screen-content { padding: 20px 16px; }
+}
+
+@media (max-width: 380px) {
+    .title { font-size: 28px; }
+    .subtitle { font-size: 14px; }
+    .features-mini span { font-size: 11px; padding: 5px 10px; }
 }
