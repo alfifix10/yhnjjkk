@@ -97,21 +97,20 @@ function playNotif() {
 
 // ---- تشغيل ----
 document.addEventListener('DOMContentLoaded', () => {
-    initParticles();
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
+    try {
+        initParticles();
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
 
-    // محاولة تسجيل دخول مجهول (اختياري)
-    if (firebase.auth) {
-        firebase.auth().signInAnonymously().catch(() => {});
-    }
-
-    const savedName = localStorage.getItem('jiranak_name');
-    if (savedName && myLat !== 0 && myLng !== 0) {
-        myName = savedName;
-        enterPeopleScreen();
-    } else {
-        initLanding();
+        var savedName = localStorage.getItem('jiranak_name');
+        if (savedName && myLat !== 0 && myLng !== 0) {
+            myName = savedName;
+            enterPeopleScreen();
+        } else {
+            initLanding();
+        }
+    } catch (e) {
+        document.body.innerHTML = '<div style="padding:40px;text-align:center;color:white;font-family:sans-serif;direction:rtl"><h2>حدث خطأ</h2><p>' + e.message + '</p><button onclick="localStorage.clear();location.reload()" style="padding:12px 24px;font-size:16px;margin-top:20px;border-radius:12px;border:none;background:#6c5ce7;color:white;cursor:pointer">إعادة تشغيل</button></div>';
     }
 });
 
@@ -133,9 +132,11 @@ function initLanding() {
     showScreen('landingScreen');
     const input = document.getElementById('nicknameInput');
     const joinBtn = document.getElementById('joinBtn');
-    const savedName = localStorage.getItem('jiranak_name');
+    var savedName = localStorage.getItem('jiranak_name');
     input.value = savedName || '';
-    setTimeout(() => input.focus(), 300);
+    joinBtn.disabled = false;
+    joinBtn.textContent = 'ادخل';
+    setTimeout(function() { input.focus(); }, 300);
 
     joinBtn.onclick = () => {
         const errDiv = document.getElementById('locationError');
