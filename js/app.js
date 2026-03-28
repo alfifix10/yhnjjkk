@@ -24,9 +24,13 @@ let unreadFrom = new Set();
 let myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]'));
 let lastMsgTime = 0;
 let chatHistory = new Map();
-let presenceRef, myPresenceRef, msgListener;
-let partnerPresenceRef = null; // [FIX 2] مراقبة حالة الطرف الثاني
-let currentScreen = 'landing'; // [FIX 3] تتبع الشاشة الحالية
+let presenceRef = null;
+let myPresenceRef = null;
+let msgListener = null;
+let partnerPresenceRef = null;
+let currentScreen = 'landing';
+let heartbeatInterval = null;
+let partnerWasOnline = true; // لمنع سبام "غادر"
 
 const AVATARS = ['😎','🦊','🐱','🦁','🐸','🦉','🐼','🐨','🦋','🌸','⚡','🔥','🌙','🎭','👻','🤖','🎯','💎','🌈','🍀'];
 const GRADIENTS = [
@@ -62,11 +66,8 @@ function playNotif() {
 // ---- تشغيل ----
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
-
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
-
-    // دائماً نعرض صفحة الدخول — الاسم المحفوظ يكون مجرد اقتراح
     initLanding();
 });
 
@@ -136,6 +137,9 @@ function requestLocation() {
 
 // ========== SCREEN 2: People ==========
 function enterPeopleScreen() {
+    // [FIX 1+2] تنظيف أي listeners و intervals قديمة أولاً
+    cleanup();
+
     currentScreen = 'people';
     showScreen('peopleScreen');
     document.getElementById('myName').textContent = myName;
@@ -148,14 +152,14 @@ function enterPeopleScreen() {
     myPresenceRef.set({ name: myName, lat: myLat, lng: myLng, t: firebase.database.ServerValue.TIMESTAMP });
     myPresenceRef.onDisconnect().remove();
 
-    // تحديث الوقت كل دقيقة عشان ما يتحذف الحساب
-    setInterval(() => {
+    // [FIX 2] heartbeat واحد فقط
+    heartbeatInterval = setInterval(() => {
         if (myPresenceRef) myPresenceRef.update({ t: firebase.database.ServerValue.TIMESTAMP });
     }, 60000);
 
     presenceRef.on('value', (snap) => {
         const data = snap.val() || {};
-        // تنظيف الحسابات الميتة (أكثر من 3 دقائق بدون تحديث)
+        // تنظيف الحسابات الميتة (أكثر من 3 دقائق)
         const now = Date.now();
         Object.entries(data).forEach(([id, u]) => {
             if (u.t && now - u.t > 3 * 60 * 1000 && id !== myId) {
@@ -166,7 +170,7 @@ function enterPeopleScreen() {
         renderPeopleFromData(data);
     });
 
-    // استمع للرسائل الموجهة لي
+    // استمع للرسائل
     const myMsgsRef = db.ref('msgs/' + myId);
     msgListener = myMsgsRef.on('child_added', (snap) => {
         const msg = snap.val();
@@ -187,7 +191,6 @@ function enterPeopleScreen() {
         snap.ref.remove();
     });
 
-    // [FIX 1] زر تغيير الاسم
     document.getElementById('backToLanding').onclick = () => {
         cleanup();
         localStorage.removeItem('jiranak_name');
@@ -198,7 +201,6 @@ function enterPeopleScreen() {
         initLanding();
     };
 
-    // [FIX 1] زر تعديل الاسم (بدون تغيير الهوية)
     document.getElementById('editNameBtn').onclick = () => {
         const newName = prompt('اكتب اسمك الجديد:', myName);
         if (newName && newName.trim().length > 0 && newName.trim().length <= 20) {
@@ -236,13 +238,14 @@ function renderPeopleFromData(data) {
 
     users.sort((a, b) => getDistance(a.lat, a.lng) - getDistance(b.lat, b.lng));
 
+    // [FIX 3] استخدام addEventListener بدل onclick inline لتفادي XSS
     list.innerHTML = users.map((u, i) => {
         const dist = getDistance(u.lat, u.lng);
         const meters = Math.round(dist * 1000);
         const distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
         const hasUnread = unreadFrom.has(u.id);
         return `
-            <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" onclick="startChat('${u.id}','${esc(u.name)}',${u.lat},${u.lng})">
+            <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat}" data-ulng="${u.lng}">
                 <div class="person-avatar" style="background:${getGradient(u.id)}">
                     ${getAvatar(u.id)}
                     ${hasUnread ? '<span class="unread-dot"></span>' : ''}
@@ -254,6 +257,13 @@ function renderPeopleFromData(data) {
                 <div class="person-arrow">←</div>
             </div>`;
     }).join('');
+
+    // ربط الأحداث بأمان
+    list.querySelectorAll('.person-card').forEach(card => {
+        card.onclick = () => {
+            startChat(card.dataset.uid, card.dataset.uname, parseFloat(card.dataset.ulat), parseFloat(card.dataset.ulng));
+        };
+    });
 }
 
 // ========== SCREEN 3: Chat ==========
@@ -261,6 +271,7 @@ function startChat(userId, userName, uLat, uLng) {
     unreadFrom.delete(userId);
     currentChatUser = { id: userId, name: userName, lat: uLat, lng: uLng };
     currentScreen = 'chat';
+    partnerWasOnline = true;
     showScreen('chatScreen');
     history.pushState({ screen: 'chat' }, '', '');
 
@@ -273,7 +284,6 @@ function startChat(userId, userName, uLat, uLng) {
     const msgsDiv = document.getElementById('chatMessages');
     msgsDiv.innerHTML = '';
 
-    // استعادة الرسائل السابقة
     const prevMsgs = chatHistory.get(userId) || [];
     if (prevMsgs.length > 0) {
         prevMsgs.forEach(m => addMsg(m.text, m.isMe));
@@ -281,7 +291,7 @@ function startChat(userId, userName, uLat, uLng) {
         addSystemMsg(`بدأت محادثة مع ${userName} 💬`);
     }
 
-    // [FIX 2] مراقبة حالة الطرف الثاني
+    // [FIX 4] مراقبة حالة الطرف الثاني — بدون سبام
     if (partnerPresenceRef) partnerPresenceRef.off();
     partnerPresenceRef = db.ref('online/' + userId);
     partnerPresenceRef.on('value', (snap) => {
@@ -289,14 +299,16 @@ function startChat(userId, userName, uLat, uLng) {
         if (snap.exists()) {
             statusEl.textContent = `📍 يبعد ${distText}`;
             statusEl.style.color = '';
-        } else {
+            partnerWasOnline = true;
+        } else if (partnerWasOnline) {
+            // يظهر الرسالة مرة واحدة فقط
             statusEl.textContent = '⚫ غير متصل';
             statusEl.style.color = '#e17055';
             addSystemMsg('الطرف الثاني غادر المحادثة');
+            partnerWasOnline = false;
         }
     });
 
-    // [FIX 4] عداد الأحرف
     const inputEl = document.getElementById('msgInput');
     const charCounter = document.getElementById('charCounter');
     inputEl.setAttribute('maxlength', '500');
@@ -311,8 +323,8 @@ function startChat(userId, userName, uLat, uLng) {
         }
     };
 
-    // إعداد الإرسال
     const sendBtn = document.getElementById('sendBtn');
+    let msgCounter = 0;
 
     const sendMsg = () => {
         const el = document.getElementById('msgInput');
@@ -322,7 +334,9 @@ function startChat(userId, userName, uLat, uLng) {
         if (now - lastMsgTime < 500) return;
         lastMsgTime = now;
 
-        addMsg(text, true, false);
+        // [FIX 5] كل رسالة تاخذ ID فريد لعلامة ✓
+        const thisMsgId = 'msg-' + (++msgCounter);
+        addMsg(text, true, false, thisMsgId);
         saveToHistory(userId, text, true);
         el.value = '';
         charCounter.style.display = 'none';
@@ -334,10 +348,10 @@ function startChat(userId, userName, uLat, uLng) {
             text: text,
             t: firebase.database.ServerValue.TIMESTAMP
         }).then(() => {
-            const allMsgs = document.getElementById('chatMessages').querySelectorAll('.msg-me');
-            const last = allMsgs[allMsgs.length - 1];
-            if (last) {
-                const tick = last.querySelector('.msg-tick');
+            // [FIX 5] علامة ✓ للرسالة الصحيحة بالضبط
+            const msgEl = document.getElementById(thisMsgId);
+            if (msgEl) {
+                const tick = msgEl.querySelector('.msg-tick');
                 if (tick) tick.textContent = '✓';
             }
         });
@@ -360,9 +374,10 @@ function saveToHistory(userId, text, isMe) {
     chatHistory.get(userId).push({ text, isMe });
 }
 
-function addMsg(text, isMe, delivered = true) {
+function addMsg(text, isMe, delivered = true, msgId = null) {
     const msgs = document.getElementById('chatMessages');
     const div = document.createElement('div');
+    if (msgId) div.id = msgId;
     const now = new Date();
     const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
     div.className = `msg ${isMe ? 'msg-me' : 'msg-them'}`;
@@ -381,16 +396,14 @@ function addSystemMsg(text) {
     msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ========== [FIX 3] زر الرجوع في المتصفح ==========
+// ========== زر الرجوع في المتصفح ==========
 window.addEventListener('popstate', (e) => {
     if (currentScreen === 'chat') {
-        // من الدردشة → قائمة الجيران
         if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
         currentChatUser = null;
         currentScreen = 'people';
         showScreen('peopleScreen');
     } else if (currentScreen === 'people') {
-        // من قائمة الجيران → نبقى (ما نطلع من الموقع)
         history.pushState({ screen: 'people' }, '', '');
     }
 });
@@ -426,9 +439,10 @@ function shareLink() {
 
 function cleanup() {
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
-    if (myPresenceRef) myPresenceRef.remove();
-    if (presenceRef) presenceRef.off();
-    if (msgListener) db.ref('msgs/' + myId).off();
+    if (myPresenceRef) { myPresenceRef.remove(); myPresenceRef = null; }
+    if (presenceRef) { presenceRef.off(); presenceRef = null; }
+    if (msgListener) { db.ref('msgs/' + myId).off(); msgListener = null; }
+    if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
     unreadFrom.clear();
     currentChatUser = null;
 }
