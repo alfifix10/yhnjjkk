@@ -17,8 +17,8 @@ let db;
 let myId = localStorage.getItem('jiranak_id') || crypto.randomUUID();
 localStorage.setItem('jiranak_id', myId);
 let myName = '';
-let myLat = 0;
-let myLng = 0;
+let myLat = parseFloat(localStorage.getItem('jiranak_lat')) || 0;
+let myLng = parseFloat(localStorage.getItem('jiranak_lng')) || 0;
 let currentChatUser = null;
 let unreadFrom = new Set();
 let myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]'));
@@ -89,7 +89,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
-    initLanding();
+
+    const savedName = localStorage.getItem('jiranak_name');
+    if (savedName && myLat !== 0 && myLng !== 0) {
+        // دخول فوري — عنده اسم وموقع محفوظين
+        myName = savedName;
+        enterPeopleScreen();
+    } else {
+        initLanding();
+    }
 });
 
 function initParticles() {
@@ -150,7 +158,13 @@ function requestLocation() {
     }
 
     navigator.geolocation.getCurrentPosition(
-        (pos) => { myLat = pos.coords.latitude; myLng = pos.coords.longitude; enterPeopleScreen(); },
+        (pos) => {
+            myLat = pos.coords.latitude;
+            myLng = pos.coords.longitude;
+            localStorage.setItem('jiranak_lat', myLat);
+            localStorage.setItem('jiranak_lng', myLng);
+            enterPeopleScreen();
+        },
         () => {
             if (btn) { btn.textContent = 'ادخل'; btn.disabled = false; }
             alert('لازم تسمح بتحديد الموقع عشان تشوف جيرانك!');
