@@ -294,13 +294,15 @@ function enterPeopleScreen() {
     });
 
     document.getElementById('backToLanding').onclick = () => {
+        // ننتظر حذف الحساب القديم قبل إنشاء جديد
+        var deletePromise = myPresenceRef ? myPresenceRef.remove() : Promise.resolve();
         cleanup();
         localStorage.removeItem('jiranak_name');
         myOldIds.add(myId);
         localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
         myId = generateId();
         localStorage.setItem('jiranak_id', myId);
-        initLanding();
+        deletePromise.then(function() { initLanding(); }).catch(function() { initLanding(); });
     };
 
     document.getElementById('editNameBtn').onclick = () => {
