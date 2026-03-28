@@ -462,21 +462,9 @@ function enterPeopleScreen() {
     });
 
     document.getElementById('backToLanding').onclick = () => {
-        showModal({
-            title: 'تغيير الاسم',
-            message: 'اكتب اسمك الجديد (هويتك ومحادثاتك تبقى):',
-            input: true,
-            inputValue: myName,
-            confirmText: 'تغيير',
-            onConfirm: (val) => {
-                if (val.length > 0 && val.length <= 20) {
-                    myName = val;
-                    localStorage.setItem('jiranak_name', myName);
-                    document.getElementById('myName').textContent = myName;
-                    myPresenceRef.update({ name: myName });
-                }
-            }
-        });
+        cleanup();
+        localStorage.removeItem('jiranak_name');
+        initLanding();
     };
 
     document.getElementById('editNameBtn').onclick = () => {
