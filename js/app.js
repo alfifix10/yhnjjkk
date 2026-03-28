@@ -175,40 +175,49 @@ function requestLocation() {
     if (btn) { btn.textContent = '⏳ انتظر...'; btn.disabled = true; }
 
     if (!navigator.geolocation) {
-        alert('متصفحك لا يدعم تحديد الموقع');
-        if (btn) { btn.textContent = 'ادخل'; btn.disabled = false; }
+        // المتصفح ما يدعم GPS — ادخل بدون موقع
+        enterPeopleScreen();
         return;
     }
 
     enteredFromGeo = false;
 
-    // watchPosition يتتبع الموقع ويحسّن الدقة مع الوقت
+    // محاولة واحدة سريعة أولاً
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            myLat = pos.coords.latitude;
+            myLng = pos.coords.longitude;
+            localStorage.setItem('jiranak_lat', myLat);
+            localStorage.setItem('jiranak_lng', myLng);
+            enteredFromGeo = true;
+            enterPeopleScreen();
+
+            // بعد الدخول، تابع بـ watchPosition لتحسين الدقة
+            startGeoWatch();
+        },
+        () => {
+            // GPS مرفوض أو فشل — ادخل بدون موقع
+            enteredFromGeo = true;
+            enterPeopleScreen();
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+}
+
+function startGeoWatch() {
+    if (geoWatchId !== null) return;
     geoWatchId = navigator.geolocation.watchPosition(
         (pos) => {
             myLat = pos.coords.latitude;
             myLng = pos.coords.longitude;
             localStorage.setItem('jiranak_lat', myLat);
             localStorage.setItem('jiranak_lng', myLng);
-
-            // أول موقع — ادخل فوراً
-            if (!enteredFromGeo) {
-                enteredFromGeo = true;
-                enterPeopleScreen();
-            }
-
-            // حدّث موقعي في Firebase بإحداثيات مقرّبة
             if (myPresenceRef) {
                 myPresenceRef.update({ lat: roundCoord(myLat), lng: roundCoord(myLng) });
             }
         },
-        () => {
-            if (!enteredFromGeo) {
-                if (btn) { btn.textContent = 'ادخل'; btn.disabled = false; }
-                const errDiv = document.getElementById('locationError');
-                if (errDiv) errDiv.style.display = 'block';
-            }
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 0 }
     );
 }
 
@@ -226,7 +235,12 @@ function enterPeopleScreen() {
     presenceRef = db.ref('online');
     myPresenceRef = presenceRef.child(myId);
 
-    myPresenceRef.set({ name: myName, lat: roundCoord(myLat), lng: roundCoord(myLng), t: firebase.database.ServerValue.TIMESTAMP });
+    const presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
+    if (myLat !== 0 && myLng !== 0) {
+        presenceData.lat = roundCoord(myLat);
+        presenceData.lng = roundCoord(myLng);
+    }
+    myPresenceRef.set(presenceData);
     myPresenceRef.onDisconnect().remove();
 
     // [FIX 2] heartbeat واحد فقط
@@ -313,13 +327,19 @@ function renderPeopleFromData(data) {
     list.style.display = 'flex';
     noPeople.style.display = 'none';
 
-    users.sort((a, b) => getDistance(a.lat, a.lng) - getDistance(b.lat, b.lng));
+    if (myLat !== 0 && myLng !== 0) {
+        users.sort((a, b) => getDistance(a.lat, a.lng) - getDistance(b.lat, b.lng));
+    }
 
-    // [FIX 3] استخدام addEventListener بدل onclick inline لتفادي XSS
     list.innerHTML = users.map((u, i) => {
-        const dist = getDistance(u.lat, u.lng);
-        const meters = Math.round(dist * 1000);
-        const distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
+        let distText = '';
+        if (myLat !== 0 && myLng !== 0 && u.lat && u.lng) {
+            const dist = getDistance(u.lat, u.lng);
+            const meters = Math.round(dist * 1000);
+            distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
+        } else {
+            distText = 'متصل الآن';
+        }
         const hasUnread = unreadFrom.has(u.id);
         return `
             <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat}" data-ulng="${u.lng}">
@@ -352,11 +372,14 @@ function startChat(userId, userName, uLat, uLng) {
     showScreen('chatScreen');
     history.pushState({ screen: 'chat' }, '', '');
 
-    const dist = getDistance(uLat, uLng);
-    const meters = Math.round(dist * 1000);
-    const distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
+    let distText = 'متصل';
+    if (myLat !== 0 && myLng !== 0 && uLat && uLng) {
+        const dist = getDistance(uLat, uLng);
+        const meters = Math.round(dist * 1000);
+        distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
+    }
     document.getElementById('chatWith').textContent = userName;
-    document.getElementById('chatDistance').textContent = `📍 يبعد ${distText}`;
+    document.getElementById('chatDistance').textContent = myLat !== 0 ? `📍 يبعد ${distText}` : `🟢 ${distText}`;
 
     const msgsDiv = document.getElementById('chatMessages');
     msgsDiv.innerHTML = '';
