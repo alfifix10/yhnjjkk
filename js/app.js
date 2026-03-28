@@ -107,10 +107,9 @@ function requestLocation() {
             enterPeopleScreen();
         },
         (err) => {
-            // إذا رفض الإذن، نستخدم موقع ثابت (عشان الجهازين يشوفون بعض)
-            myLat = 24.7136;
-            myLng = 46.6753;
-            enterPeopleScreen();
+            btn.textContent = 'ادخل';
+            btn.disabled = false;
+            alert('لازم تسمح بتحديد الموقع عشان تشوف جيرانك!');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
