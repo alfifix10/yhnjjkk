@@ -55,17 +55,32 @@ function hashCode(str) {
 function playNotif() {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.08);
-        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.2);
+        const t = ctx.currentTime;
+
+        // النغمة الأولى — pop قصير
+        const o1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        o1.connect(g1); g1.connect(ctx.destination);
+        o1.type = 'sine';
+        o1.frequency.setValueAtTime(1400, t);
+        o1.frequency.exponentialRampToValueAtTime(900, t + 0.06);
+        g1.gain.setValueAtTime(0.2, t);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+        o1.start(t);
+        o1.stop(t + 0.08);
+
+        // النغمة الثانية — أعلى بشوي بعد فاصل قصير
+        const o2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(1600, t + 0.1);
+        o2.frequency.exponentialRampToValueAtTime(1000, t + 0.18);
+        g2.gain.setValueAtTime(0.001, t);
+        g2.gain.setValueAtTime(0.25, t + 0.1);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        o2.start(t + 0.1);
+        o2.stop(t + 0.2);
     } catch (e) {}
 }
 
