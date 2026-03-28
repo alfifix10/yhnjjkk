@@ -4,8 +4,8 @@
 // ========================================
 
 // Supabase (مجاني - للدردشة الفورية)
-const SUPABASE_URL = 'https://demo.supabase.co'; // ← غيّره بعد إنشاء مشروع
-const SUPABASE_KEY = 'demo-key'; // ← غيّره
+const SUPABASE_URL = 'https://hocxgsvrosyphgjpsxfh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_DTNirTBb72VaK7QpVvWjJg_-ROAFR_e';
 
 let supabaseClient = null;
 let myId = crypto.randomUUID();
@@ -121,12 +121,7 @@ function enterPeopleScreen() {
     showScreen('peopleScreen');
     document.getElementById('myName').textContent = myName;
 
-    // بدء الاتصال بـ Supabase أو المحاكاة
-    if (SUPABASE_URL !== 'https://demo.supabase.co') {
-        initSupabase();
-    } else {
-        simulateNearbyUsers();
-    }
+    initSupabase();
 
     // زر الرجوع
     document.getElementById('backToLanding').addEventListener('click', () => {
@@ -138,25 +133,6 @@ function enterPeopleScreen() {
     document.getElementById('shareBtn')?.addEventListener('click', shareLink);
 }
 
-function simulateNearbyUsers() {
-    // محاكاة مستخدمين قريبين (للعرض التجريبي)
-    const fakeUsers = [
-        { id: 'u1', name: 'الجار الفضولي', lat: myLat + 0.003, lng: myLng + 0.002 },
-        { id: 'u2', name: 'أبو سعود', lat: myLat - 0.005, lng: myLng + 0.004 },
-        { id: 'u3', name: 'بنت الجيران', lat: myLat + 0.001, lng: myLng - 0.003 },
-        { id: 'u4', name: 'مجهول_007', lat: myLat - 0.008, lng: myLng + 0.001 },
-        { id: 'u5', name: 'الشبح', lat: myLat + 0.012, lng: myLng - 0.006 },
-        { id: 'u6', name: 'جار الخير', lat: myLat - 0.002, lng: myLng - 0.009 },
-        { id: 'u7', name: 'أم البيت', lat: myLat + 0.006, lng: myLng + 0.008 },
-    ];
-
-    fakeUsers.forEach((u, i) => {
-        setTimeout(() => {
-            nearbyUsers.set(u.id, u);
-            renderPeopleList();
-        }, i * 400);
-    });
-}
 
 function renderPeopleList() {
     const list = document.getElementById('peopleList');
@@ -222,12 +198,7 @@ function startChat(userId) {
         addMsg(text, true);
         input.value = '';
 
-        // محاكاة رد (في النسخة الحقيقية يكون عبر Supabase)
-        if (SUPABASE_URL === 'https://demo.supabase.co') {
-            simulateReply(user.name);
-        } else {
-            sendViaSupabase(text);
-        }
+        sendViaSupabase(text);
     };
 
     // إزالة listeners قديمة
@@ -269,32 +240,6 @@ function addSystemMsg(text) {
     msgs.appendChild(div);
 }
 
-function simulateReply(name) {
-    const replies = [
-        'هلا والله! كيف الحال؟',
-        'أهلين جار! شخبارك؟',
-        'مرحبا! من وين أنت بالضبط؟',
-        'هلا وغلا! أول مرة أشوفك هنا',
-        'ياهلا! الحارة حلوة اليوم',
-        'مين أنت يا جار؟ 😄',
-        'أخيراً أحد من الحارة!',
-        'هلا! وش الأخبار عندكم؟',
-    ];
-
-    // مؤشر الكتابة
-    const msgs = document.getElementById('chatMessages');
-    const typing = document.createElement('div');
-    typing.className = 'typing-indicator';
-    typing.innerHTML = '<span></span><span></span><span></span>';
-    msgs.appendChild(typing);
-    msgs.scrollTop = msgs.scrollHeight;
-
-    setTimeout(() => {
-        typing.remove();
-        const reply = replies[Math.floor(Math.random() * replies.length)];
-        addMsg(reply, false);
-    }, 1200 + Math.random() * 1500);
-}
 
 // ========== Supabase (الاتصال الحقيقي) ==========
 function initSupabase() {
