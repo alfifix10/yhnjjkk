@@ -378,6 +378,39 @@ body {
     transform: translateX(-4px);
 }
 
+/* Unread notification */
+.person-card.has-unread {
+    border-color: var(--accent-2);
+    animation: fadeInUp 0.4s ease both, nudge 0.5s ease;
+}
+@keyframes nudge {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+.unread-dot {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 14px;
+    height: 14px;
+    background: var(--accent-2);
+    border-radius: 50%;
+    border: 2px solid var(--dark-2);
+    animation: pulse 1.5s ease infinite;
+}
+.new-msg-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    background: var(--accent-2);
+    color: white;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
 /* No people */
 .no-people {
     text-align: center;

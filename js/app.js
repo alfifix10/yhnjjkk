@@ -3,7 +3,6 @@
 // دردشة مجهولة مع الجيران
 // ========================================
 
-// Supabase (مجاني - للدردشة الفورية)
 const SUPABASE_URL = 'https://hocxgsvrosyphgjpsxfh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvY3hnc3Zyb3N5cGhnanBzeGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Nzk3ODYsImV4cCI6MjA5MDI1NTc4Nn0.2NJmnwxT30IJBxuKrbWB3m_3vNfmPq7YmJs4PSiB0YU';
 
@@ -15,9 +14,10 @@ let myLng = 0;
 let currentChatUser = null;
 let chatChannel = null;
 let presenceChannel = null;
+let notifyChannel = null;
 let nearbyUsers = new Map();
+let unreadFrom = new Set(); // أشخاص أرسلوا لك ولم تقرأ
 
-// ---- الألوان والأيقونات للمستخدمين ----
 const AVATARS = ['😎','🦊','🐱','🦁','🐸','🦉','🐼','🐨','🦋','🌸','⚡','🔥','🌙','🎭','👻','🤖','🎯','💎','🌈','🍀'];
 const GRADIENTS = [
     'linear-gradient(135deg, #6c5ce7, #a29bfe)',
@@ -38,7 +38,7 @@ function hashCode(str) {
     return Math.abs(h);
 }
 
-// ---- تشغيل التطبيق ----
+// ---- تشغيل ----
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     initLanding();
@@ -78,7 +78,6 @@ function initLanding() {
         if (e.key === 'Enter') joinBtn.click();
     });
 
-    // أسماء مستعارة جاهزة
     document.querySelectorAll('.name-chip').forEach(chip => {
         chip.addEventListener('click', () => {
             input.value = chip.dataset.name;
@@ -87,7 +86,6 @@ function initLanding() {
     });
 }
 
-// ---- طلب الموقع ----
 function requestLocation() {
     const btn = document.getElementById('joinBtn');
     btn.textContent = '⏳ انتظر...';
@@ -119,19 +117,15 @@ function requestLocation() {
 function enterPeopleScreen() {
     showScreen('peopleScreen');
     document.getElementById('myName').textContent = myName;
-
     initSupabase();
 
-    // زر الرجوع
     document.getElementById('backToLanding').addEventListener('click', () => {
         cleanup();
         showScreen('landingScreen');
     });
 
-    // زر المشاركة
     document.getElementById('shareBtn')?.addEventListener('click', shareLink);
 }
-
 
 function renderPeopleList() {
     const list = document.getElementById('peopleList');
@@ -150,17 +144,20 @@ function renderPeopleList() {
     list.style.display = 'flex';
     noPeople.style.display = 'none';
 
-    // ترتيب بالمسافة
     users.sort((a, b) => getDistance(a.lat, a.lng) - getDistance(b.lat, b.lng));
 
     list.innerHTML = users.map((u, i) => {
         const dist = getDistance(u.lat, u.lng);
         const distText = dist < 1 ? `${Math.round(dist * 1000)} متر` : `${dist.toFixed(1)} كم`;
+        const hasUnread = unreadFrom.has(u.id);
         return `
-            <div class="person-card" data-uid="${u.id}" style="animation-delay:${i * 0.08}s" onclick="startChat('${u.id}')">
-                <div class="person-avatar" style="background:${getGradient(u.id)}">${getAvatar(u.id)}</div>
+            <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i * 0.08}s" onclick="startChat('${u.id}')">
+                <div class="person-avatar" style="background:${getGradient(u.id)}">
+                    ${getAvatar(u.id)}
+                    ${hasUnread ? '<span class="unread-dot"></span>' : ''}
+                </div>
                 <div class="person-info">
-                    <div class="person-name">${escapeHtml(u.name)}</div>
+                    <div class="person-name">${escapeHtml(u.name)} ${hasUnread ? '<span class="new-msg-badge">رسالة جديدة</span>' : ''}</div>
                     <div class="person-distance">📍 ${distText}</div>
                 </div>
                 <div class="person-arrow">←</div>
@@ -173,6 +170,10 @@ function renderPeopleList() {
 function startChat(userId) {
     const user = nearbyUsers.get(userId);
     if (!user) return;
+
+    // إزالة إشعار الرسائل غير المقروءة
+    unreadFrom.delete(userId);
+    renderPeopleList();
 
     currentChatUser = user;
     showScreen('chatScreen');
@@ -187,6 +188,19 @@ function startChat(userId) {
     msgs.innerHTML = '';
     addSystemMsg(`بدأت محادثة مع ${user.name} - كل الرسائل مؤقتة 💨`);
 
+    // الاشتراك في غرفة الدردشة
+    const roomId = [myId, userId].sort().join('-');
+    if (chatChannel) {
+        chatChannel.unsubscribe();
+        chatChannel = null;
+    }
+    chatChannel = supabaseClient.channel(`chat-${roomId}`);
+    chatChannel.on('broadcast', { event: 'msg' }, ({ payload }) => {
+        if (payload.from !== myId) {
+            addMsg(payload.text, false);
+        }
+    }).subscribe();
+
     // إعداد الإرسال
     const input = document.getElementById('msgInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -197,10 +211,21 @@ function startChat(userId) {
         addMsg(text, true);
         input.value = '';
 
-        sendViaSupabase(text);
+        // إرسال الرسالة
+        chatChannel.send({
+            type: 'broadcast',
+            event: 'msg',
+            payload: { from: myId, text, ts: Date.now() }
+        });
+
+        // إشعار الطرف الآخر (إذا ليس في نفس الغرفة)
+        notifyChannel.send({
+            type: 'broadcast',
+            event: 'notify',
+            payload: { from: myId, to: userId, name: myName }
+        });
     };
 
-    // إزالة listeners قديمة
     const newSend = sendBtn.cloneNode(true);
     sendBtn.parentNode.replaceChild(newSend, sendBtn);
     newSend.addEventListener('click', sendMsg);
@@ -210,10 +235,9 @@ function startChat(userId) {
     newInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMsg(); });
     newInput.focus();
 
-    // زر الرجوع
     document.getElementById('backToPeople').onclick = () => {
-        // حذف الرسائل عند الخروج
         document.getElementById('chatMessages').innerHTML = '';
+        if (chatChannel) { chatChannel.unsubscribe(); chatChannel = null; }
         currentChatUser = null;
         showScreen('peopleScreen');
     };
@@ -224,7 +248,6 @@ function addMsg(text, isMe) {
     const div = document.createElement('div');
     const now = new Date();
     const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-
     div.className = `msg ${isMe ? 'msg-me' : 'msg-them'}`;
     div.innerHTML = `${escapeHtml(text)}<span class="msg-time">${time}</span>`;
     msgs.appendChild(div);
@@ -239,15 +262,14 @@ function addSystemMsg(text) {
     msgs.appendChild(div);
 }
 
-
-// ========== Supabase (الاتصال الحقيقي) ==========
+// ========== Supabase ==========
 function initSupabase() {
     try {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         document.getElementById('onlineCount').textContent = 'جاري الاتصال...';
 
+        // قناة الحضور (من متصل)
         presenceChannel = supabaseClient.channel('jiranak-room');
-
         presenceChannel
             .on('presence', { event: 'sync' }, () => {
                 const state = presenceChannel.presenceState();
@@ -272,13 +294,13 @@ function initSupabase() {
             .on('presence', { event: 'leave' }, ({ leftPresences }) => {
                 leftPresences.forEach(u => {
                     nearbyUsers.delete(u.id);
+                    unreadFrom.delete(u.id);
                 });
                 renderPeopleList();
             })
             .subscribe(async (status) => {
-                console.log('Supabase status:', status);
                 if (status === 'SUBSCRIBED') {
-                    document.getElementById('onlineCount').textContent = '✅ متصل - في انتظار جيران...';
+                    document.getElementById('onlineCount').textContent = '✅ متصل';
                     await presenceChannel.track({
                         id: myId,
                         name: myName,
@@ -289,38 +311,23 @@ function initSupabase() {
                     document.getElementById('onlineCount').textContent = '❌ خطأ في الاتصال';
                 }
             });
+
+        // قناة الإشعارات (لاستقبال تنبيه رسالة جديدة)
+        notifyChannel = supabaseClient.channel('jiranak-notify');
+        notifyChannel
+            .on('broadcast', { event: 'notify' }, ({ payload }) => {
+                // إذا الرسالة لي وأنا مو في دردشة مع هذا الشخص
+                if (payload.to === myId) {
+                    if (!currentChatUser || currentChatUser.id !== payload.from) {
+                        unreadFrom.add(payload.from);
+                        renderPeopleList();
+                    }
+                }
+            })
+            .subscribe();
+
     } catch (e) {
-        console.error('Supabase error:', e);
         document.getElementById('onlineCount').textContent = '❌ خطأ: ' + e.message;
-    }
-}
-
-function sendViaSupabase(text) {
-    if (!currentChatUser || !supabaseClient) return;
-    const roomId = [myId, currentChatUser.id].sort().join('-');
-
-    if (!chatChannel) {
-        chatChannel = supabaseClient.channel(`chat-${roomId}`);
-        chatChannel.on('broadcast', { event: 'msg' }, ({ payload }) => {
-            if (payload.from !== myId) {
-                addMsg(payload.text, false);
-            }
-        }).subscribe((status) => {
-            console.log('Chat channel:', status);
-            if (status === 'SUBSCRIBED') {
-                chatChannel.send({
-                    type: 'broadcast',
-                    event: 'msg',
-                    payload: { from: myId, text, ts: Date.now() }
-                });
-            }
-        });
-    } else {
-        chatChannel.send({
-            type: 'broadcast',
-            event: 'msg',
-            payload: { from: myId, text, ts: Date.now() }
-        });
     }
 }
 
@@ -346,23 +353,21 @@ function escapeHtml(text) {
 
 function shareLink() {
     const url = window.location.href;
-    const text = 'جرب جيرانك - دردش مع الناس اللي حولك مجهول ومؤقت!';
+    const text = 'جرب "دردش مع جيرانك" - مجهول ومؤقت!';
     if (navigator.share) {
-        navigator.share({ title: 'جيرانك', text, url });
+        navigator.share({ title: 'دردش مع جيرانك', text, url });
     } else {
         navigator.clipboard.writeText(url).then(() => alert('تم نسخ الرابط!'));
     }
 }
 
 function cleanup() {
-    if (presenceChannel) {
-        presenceChannel.untrack();
-        presenceChannel.unsubscribe();
-    }
+    if (presenceChannel) { presenceChannel.untrack(); presenceChannel.unsubscribe(); }
     if (chatChannel) chatChannel.unsubscribe();
+    if (notifyChannel) notifyChannel.unsubscribe();
     nearbyUsers.clear();
+    unreadFrom.clear();
     currentChatUser = null;
 }
 
-// تنظيف عند الإغلاق
 window.addEventListener('beforeunload', cleanup);
