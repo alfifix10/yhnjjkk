@@ -51,22 +51,25 @@ function generateId() {
 
 // استرجاع الهوية: localStorage أولاً، ثم بصمة الجهاز، ثم إنشاء جديد
 function getOrCreateId() {
-    var stored = localStorage.getItem('jiranak_id');
-    if (stored) return stored;
+    try {
+        var stored = localStorage.getItem('jiranak_id');
+        if (stored) return stored;
+    } catch(e) {}
 
     // لو مسح localStorage، نحاول نسترجع من cookie
-    var cookieMatch = document.cookie.match(/jiranak_id=([^;]+)/);
-    if (cookieMatch) {
-        localStorage.setItem('jiranak_id', cookieMatch[1]);
-        return cookieMatch[1];
-    }
+    try {
+        var cookieMatch = document.cookie.match(/jiranak_id=([^;]+)/);
+        if (cookieMatch) {
+            try { localStorage.setItem('jiranak_id', cookieMatch[1]); } catch(e) {}
+            return cookieMatch[1];
+        }
+    } catch(e) {}
 
     // هوية جديدة مبنية على بصمة الجهاز
     var fp = getDeviceFingerprint();
     var id = fp + '-' + generateId().slice(0, 8);
-    localStorage.setItem('jiranak_id', id);
-    // حفظ نسخة في cookie (تبقى حتى لو مسح localStorage)
-    document.cookie = 'jiranak_id=' + id + ';max-age=31536000;path=/;SameSite=Lax';
+    try { localStorage.setItem('jiranak_id', id); } catch(e) {}
+    try { document.cookie = 'jiranak_id=' + id + ';max-age=31536000;path=/;SameSite=Lax'; } catch(e) {}
     return id;
 }
 
@@ -76,7 +79,8 @@ var myLat = parseFloat(localStorage.getItem('jiranak_lat')) || 0;
 var myLng = parseFloat(localStorage.getItem('jiranak_lng')) || 0;
 var currentChatUser = null;
 var unreadFrom = new Set();
-var blockedUsers = new Set(JSON.parse(localStorage.getItem('jiranak_blocked') || '[]'));
+var blockedUsers;
+try { blockedUsers = new Set(JSON.parse(localStorage.getItem('jiranak_blocked') || '[]')); } catch(e) { blockedUsers = new Set(); }
 var lastMsgTime = 0;
 var msgsSentInMinute = 0;
 var minuteStart = Date.now();
@@ -87,9 +91,11 @@ function loadChatHistory() {
         var saved = localStorage.getItem('jiranak_history');
         if (saved) {
             var parsed = JSON.parse(saved);
-            return new Map(parsed);
+            if (Array.isArray(parsed)) return new Map(parsed);
         }
-    } catch(e) {}
+    } catch(e) {
+        try { localStorage.removeItem('jiranak_history'); } catch(x) {}
+    }
     return new Map();
 }
 
