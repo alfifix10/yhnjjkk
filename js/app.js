@@ -26,6 +26,11 @@ let myLng = parseFloat(localStorage.getItem('jiranak_lng')) || 0;
 let currentChatUser = null;
 let unreadFrom = new Set();
 let myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]'));
+// تنظيف: نحتفظ بآخر 10 هويات قديمة فقط
+if (myOldIds.size > 10) {
+    myOldIds = new Set([...myOldIds].slice(-10));
+    localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
+}
 let lastMsgTime = 0;
 let chatHistory = new Map();
 let presenceRef = null;
