@@ -71,8 +71,10 @@ function initLanding() {
     showScreen('landingScreen');
     const input = document.getElementById('nicknameInput');
     const joinBtn = document.getElementById('joinBtn');
+    input.value = '';
+    input.focus();
 
-    joinBtn.addEventListener('click', () => {
+    joinBtn.onclick = () => {
         const name = input.value.trim();
         if (name.length < 1) {
             input.style.borderColor = '#fd79a8';
@@ -85,15 +87,15 @@ function initLanding() {
         requestLocation();
     });
 
-    input.addEventListener('keypress', (e) => {
+    input.onkeypress = (e) => {
         if (e.key === 'Enter') joinBtn.click();
-    });
+    };
 
     document.querySelectorAll('.name-chip').forEach(chip => {
-        chip.addEventListener('click', () => {
+        chip.onclick = () => {
             input.value = chip.dataset.name;
             joinBtn.click();
-        });
+        };
     });
 }
 
@@ -119,8 +121,9 @@ function requestLocation() {
         (err) => {
             if (btn) { btn.textContent = 'ادخل'; btn.disabled = false; }
             alert('لازم تسمح بتحديد الموقع عشان تشوف جيرانك!');
+            localStorage.removeItem('jiranak_name');
             showScreen('landingScreen');
-            initLanding();
+            if (!document.getElementById('joinBtn')?.onclick) initLanding();
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
@@ -136,12 +139,12 @@ function enterPeopleScreen() {
 
     initSupabase();
 
-    document.getElementById('backToLanding').addEventListener('click', () => {
+    document.getElementById('backToLanding').onclick = () => {
         localStorage.removeItem('jiranak_name');
         cleanup();
         showScreen('landingScreen');
         initLanding();
-    });
+    };
 
     document.getElementById('shareBtn')?.addEventListener('click', shareLink);
 }
@@ -309,8 +312,12 @@ function addSystemMsg(text) {
 
 // ========== زر الرجوع في المتصفح ==========
 window.addEventListener('popstate', (e) => {
+    const state = e.state;
     if (currentChatUser) {
         leaveChatScreen();
+    } else if (document.getElementById('peopleScreen').classList.contains('active')) {
+        // لا نرجع من صفحة المتصلين (يبقى فيها)
+        history.pushState({ screen: 'people' }, '', '');
     }
 });
 
