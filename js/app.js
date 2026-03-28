@@ -7,7 +7,8 @@ const SUPABASE_URL = 'https://hocxgsvrosyphgjpsxfh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvY3hnc3Zyb3N5cGhnanBzeGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Nzk3ODYsImV4cCI6MjA5MDI1NTc4Nn0.2NJmnwxT30IJBxuKrbWB3m_3vNfmPq7YmJs4PSiB0YU';
 
 let supabaseClient = null;
-let myId = crypto.randomUUID();
+let myId = localStorage.getItem('jiranak_id') || crypto.randomUUID();
+localStorage.setItem('jiranak_id', myId);
 let myName = '';
 let myLat = 0;
 let myLng = 0;
@@ -41,7 +42,13 @@ function hashCode(str) {
 // ---- تشغيل ----
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
-    initLanding();
+    const savedName = localStorage.getItem('jiranak_name');
+    if (savedName) {
+        myName = savedName;
+        requestLocation();
+    } else {
+        initLanding();
+    }
 });
 
 // ---- Particles ----
@@ -71,6 +78,7 @@ function initLanding() {
             return;
         }
         myName = name;
+        localStorage.setItem('jiranak_name', name);
         requestLocation();
     });
 
