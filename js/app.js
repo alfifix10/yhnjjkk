@@ -14,7 +14,11 @@ const firebaseConfig = {
 };
 
 let db;
-let myId = localStorage.getItem('jiranak_id') || crypto.randomUUID();
+function generateId() {
+    if (crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
+}
+let myId = localStorage.getItem('jiranak_id') || generateId();
 localStorage.setItem('jiranak_id', myId);
 let myName = '';
 let myLat = parseFloat(localStorage.getItem('jiranak_lat')) || 0;
@@ -280,7 +284,7 @@ function enterPeopleScreen() {
         localStorage.removeItem('jiranak_name');
         myOldIds.add(myId);
         localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
-        myId = crypto.randomUUID();
+        myId = generateId();
         localStorage.setItem('jiranak_id', myId);
         initLanding();
     };
