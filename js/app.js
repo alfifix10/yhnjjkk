@@ -350,6 +350,8 @@ function enterPeopleScreen() {
             saveToHistory(msg.from, msg.text, false);
             if (navigator.vibrate) navigator.vibrate(50);
         } else {
+            // حفظ الرسالة عشان ما تضيع لما يفتح الدردشة
+            saveToHistory(msg.from, msg.text, false);
             unreadFrom.add(msg.from);
             presenceRef.once('value', s => { renderPeopleFromData(s.val() || {}); });
             playNotif();
