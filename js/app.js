@@ -217,7 +217,7 @@ function renderPeopleFromData(data) {
 
     list.innerHTML = users.map((u, i) => {
         const dist = getDistance(u.lat, u.lng);
-        const distText = dist < 1 ? `${Math.round(dist * 1000)} متر` : `${dist.toFixed(1)} كم`;
+        const distText = dist < 0.5 ? 'قريب منك' : dist < 1 ? `${Math.round(dist * 1000)} متر` : `${dist.toFixed(1)} كم`;
         const hasUnread = unreadFrom.has(u.id);
         return `
             <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" onclick="startChat('${u.id}','${esc(u.name)}',${u.lat},${u.lng})">
