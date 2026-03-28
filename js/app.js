@@ -23,6 +23,7 @@ let currentChatUser = null;
 let unreadFrom = new Set();
 let myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]'));
 let lastMsgTime = 0;
+let chatHistory = new Map(); // حفظ الرسائل في الذاكرة
 let presenceRef, myPresenceRef, msgListener;
 
 const AVATARS = ['😎','🦊','🐱','🦁','🐸','🦉','🐼','🐨','🦋','🌸','⚡','🔥','🌙','🎭','👻','🤖','🎯','💎','🌈','🍀'];
@@ -164,6 +165,7 @@ function enterPeopleScreen() {
 
         if (currentChatUser && currentChatUser.id === msg.from) {
             addMsg(msg.text, false);
+            saveToHistory(msg.from, msg.text, false);
             playNotif();
             if (navigator.vibrate) navigator.vibrate(50);
         } else {
@@ -246,8 +248,16 @@ function startChat(userId, userName, uLat, uLng) {
     document.getElementById('chatWith').textContent = userName;
     document.getElementById('chatDistance').textContent = `📍 يبعد ${distText}`;
 
-    document.getElementById('chatMessages').innerHTML = '';
-    addSystemMsg(`بدأت محادثة مع ${userName} 💨`);
+    const msgsDiv = document.getElementById('chatMessages');
+    msgsDiv.innerHTML = '';
+
+    // استعادة الرسائل السابقة
+    const history = chatHistory.get(userId) || [];
+    if (history.length > 0) {
+        history.forEach(m => addMsg(m.text, m.isMe));
+    } else {
+        addSystemMsg(`بدأت محادثة مع ${userName} 💨`);
+    }
 
     // إعداد الإرسال
     const input = document.getElementById('msgInput');
@@ -261,6 +271,7 @@ function startChat(userId, userName, uLat, uLng) {
         lastMsgTime = now;
 
         addMsg(text, true);
+        saveToHistory(userId, text, true);
         input.value = '';
 
         // إرسال عبر Firebase - فوري
@@ -287,6 +298,11 @@ function startChat(userId, userName, uLat, uLng) {
         currentChatUser = null;
         showScreen('peopleScreen');
     };
+}
+
+function saveToHistory(userId, text, isMe) {
+    if (!chatHistory.has(userId)) chatHistory.set(userId, []);
+    chatHistory.get(userId).push({ text, isMe });
 }
 
 function addMsg(text, isMe) {
