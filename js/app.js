@@ -141,6 +141,8 @@ function initLanding() {
     setTimeout(() => input.focus(), 300);
 
     joinBtn.onclick = () => {
+        const errDiv = document.getElementById('locationError');
+        if (errDiv) errDiv.style.display = 'none';
         const name = input.value.trim();
         if (name.length < 1) {
             input.style.borderColor = '#fd79a8';
@@ -202,9 +204,8 @@ function requestLocation() {
         () => {
             if (!enteredFromGeo) {
                 if (btn) { btn.textContent = 'ادخل'; btn.disabled = false; }
-                alert('لازم تسمح بتحديد الموقع عشان تشوف جيرانك!');
-                localStorage.removeItem('jiranak_name');
-                initLanding();
+                const errDiv = document.getElementById('locationError');
+                if (errDiv) errDiv.style.display = 'block';
             }
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
