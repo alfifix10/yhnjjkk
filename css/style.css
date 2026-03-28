@@ -538,17 +538,17 @@ body {
 }
 
 .msg-me {
-    align-self: flex-start;
+    margin-left: auto;
+    margin-right: 0;
     background: #6c5ce7;
     color: #fff;
-    border-bottom-right-radius: 16px;
     border-bottom-left-radius: 4px;
 }
 .msg-them {
-    align-self: flex-end;
+    margin-right: auto;
+    margin-left: 0;
     background: var(--dark-4);
     color: var(--text);
-    border-bottom-left-radius: 16px;
     border-bottom-right-radius: 4px;
 }
 
