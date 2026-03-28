@@ -80,11 +80,11 @@ body {
 /* إطار احترافي يجمع كل المحتوى */
 .screen-content > .frame {
     width: 100%;
-    max-width: 480px;
+    max-width: 520px;
     background: var(--dark-2);
     border: 1px solid var(--glass-border);
     border-radius: 28px;
-    padding: 40px 28px;
+    padding: 48px 32px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -102,50 +102,86 @@ body {
     background: linear-gradient(90deg, transparent, rgba(108,92,231,0.4), rgba(0,206,201,0.4), transparent);
 }
 
-/* إطار صفحة الأشخاص */
+/* إطار صفحة الأشخاص - يشمل التوبار + القائمة */
 .people-frame {
     width: 100%;
-    max-width: 480px;
+    max-width: 520px;
     background: var(--dark-2);
     border: 1px solid var(--glass-border);
     border-radius: 24px;
-    padding: 28px 20px;
+    padding: 24px 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     box-shadow: 0 16px 60px rgba(0, 0, 0, 0.5);
     flex: 1;
-    max-height: calc(100vh - 120px);
+    max-height: calc(100vh - 80px);
     overflow-y: auto;
 }
 
 /* إطار الشات */
 .chat-frame {
     width: 100%;
-    max-width: 480px;
+    max-width: 520px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     height: 100%;
 }
 
-@media (min-width: 481px) {
+/* كمبيوتر: كل شيء داخل إطار مركزي */
+@media (min-width: 769px) {
     .screen {
         background: var(--dark);
-        align-items: center;
-        justify-content: center;
     }
+
+    /* التوبار داخل الإطار */
+    #peopleScreen .topbar,
+    #chatScreen .topbar {
+        max-width: 520px;
+        margin: 20px auto 0;
+        border-radius: 24px 24px 0 0;
+        border: 1px solid var(--glass-border);
+        border-bottom: none;
+    }
+
+    #peopleScreen .screen-content {
+        padding-top: 0;
+    }
+
+    .people-frame {
+        border-radius: 0 0 24px 24px;
+        border-top: none;
+    }
+
     #chatScreen {
-        padding: 20px;
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+    }
+    #chatScreen .topbar {
+        border-radius: 24px 24px 0 0;
     }
     .chat-frame {
         background: var(--dark-2);
         border: 1px solid var(--glass-border);
-        border-radius: 24px;
+        border-top: none;
+        border-radius: 0 0 24px 24px;
+        height: calc(100vh - 120px);
+        max-height: 700px;
         overflow: hidden;
-        height: calc(100vh - 40px);
-        max-height: 800px;
-        box-shadow: 0 16px 60px rgba(0, 0, 0, 0.5);
+    }
+    .chat-input-bar {
+        border-radius: 0 0 24px 24px;
+    }
+}
+
+/* جوال صغير */
+@media (max-width: 480px) {
+    .screen-content > .frame {
+        border-radius: 20px;
+        padding: 32px 20px;
+        margin: 8px;
     }
 }
 
