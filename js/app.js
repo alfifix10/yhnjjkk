@@ -147,6 +147,9 @@ function initLanding() {
     });
 }
 
+let geoWatchId = null;
+let enteredFromGeo = false;
+
 function requestLocation() {
     const btn = document.getElementById('joinBtn');
     if (btn) { btn.textContent = '⏳ انتظر...'; btn.disabled = true; }
@@ -157,21 +160,36 @@ function requestLocation() {
         return;
     }
 
-    navigator.geolocation.getCurrentPosition(
+    enteredFromGeo = false;
+
+    // watchPosition يتتبع الموقع ويحسّن الدقة مع الوقت
+    geoWatchId = navigator.geolocation.watchPosition(
         (pos) => {
             myLat = pos.coords.latitude;
             myLng = pos.coords.longitude;
             localStorage.setItem('jiranak_lat', myLat);
             localStorage.setItem('jiranak_lng', myLng);
-            enterPeopleScreen();
+
+            // أول موقع — ادخل فوراً
+            if (!enteredFromGeo) {
+                enteredFromGeo = true;
+                enterPeopleScreen();
+            }
+
+            // حدّث موقعي في Firebase + أعد حساب المسافات
+            if (myPresenceRef) {
+                myPresenceRef.update({ lat: myLat, lng: myLng });
+            }
         },
         () => {
-            if (btn) { btn.textContent = 'ادخل'; btn.disabled = false; }
-            alert('لازم تسمح بتحديد الموقع عشان تشوف جيرانك!');
-            localStorage.removeItem('jiranak_name');
-            initLanding();
+            if (!enteredFromGeo) {
+                if (btn) { btn.textContent = 'ادخل'; btn.disabled = false; }
+                alert('لازم تسمح بتحديد الموقع عشان تشوف جيرانك!');
+                localStorage.removeItem('jiranak_name');
+                initLanding();
+            }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
 }
 
@@ -483,6 +501,7 @@ function cleanup() {
     if (presenceRef) { presenceRef.off(); presenceRef = null; }
     if (msgListener) { db.ref('msgs/' + myId).off(); msgListener = null; }
     if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+    if (geoWatchId !== null) { navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
     unreadFrom.clear();
     currentChatUser = null;
 }
