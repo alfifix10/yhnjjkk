@@ -238,10 +238,16 @@ function renderPeopleFromData(data) {
 
 // ========== SCREEN 3: Chat ==========
 function startChat(userId, userName, uLat, uLng) {
+    console.log('startChat called for', userName);
     unreadFrom.delete(userId);
     currentChatUser = { id: userId, name: userName, lat: uLat, lng: uLng };
     showScreen('chatScreen');
-    history.pushState({ screen: 'chat' }, '', '');
+    try {
+        history.pushState({ screen: 'chat' }, '', '');
+        console.log('pushState OK');
+    } catch(e) {
+        console.error('pushState error:', e);
+    }
 
     const dist = getDistance(uLat, uLng);
     const distText = dist < 1 ? `${Math.round(dist * 1000)} متر` : `${dist.toFixed(1)} كم`;
@@ -265,8 +271,10 @@ function startChat(userId, userName, uLat, uLng) {
     inputEl.setAttribute('maxlength', '500');
 
     const sendMsg = () => {
+        console.log('sendMsg called');
         const el = document.getElementById('msgInput');
         const text = el.value.trim();
+        console.log('text:', text);
         if (!text || text.length > 500) return;
         const now = Date.now();
         if (now - lastMsgTime < 500) return;
@@ -297,6 +305,7 @@ function startChat(userId, userName, uLat, uLng) {
     sendBtn.onclick = sendMsg;
     inputEl.onkeypress = (e) => { if (e.key === 'Enter') sendMsg(); };
     inputEl.focus();
+    console.log('sendBtn wired up successfully');
 
     document.getElementById('backToPeople').onclick = () => {
         document.getElementById('chatMessages').innerHTML = '';
