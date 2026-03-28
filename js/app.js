@@ -20,6 +20,21 @@ let unreadFrom = new Set();
 let myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]'));
 let lastMsgTime = 0;
 
+// صوت تنبيه بسيط
+function playNotif() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 800;
+        gain.gain.value = 0.3;
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+    } catch (e) {}
+}
+
 const AVATARS = ['😎','🦊','🐱','🦁','🐸','🦉','🐼','🐨','🦋','🌸','⚡','🔥','🌙','🎭','👻','🤖','🎯','💎','🌈','🍀'];
 const GRADIENTS = [
     'linear-gradient(135deg, #6c5ce7, #a29bfe)',
@@ -168,11 +183,13 @@ function enterPeopleScreen() {
             const msg = payload.new;
             if (currentChatUser && currentChatUser.uid === msg.from_id) {
                 addMsg(msg.text, false);
+                playNotif();
                 if (navigator.vibrate) navigator.vibrate(50);
             } else {
                 unreadFrom.add(msg.from_id);
                 renderPeopleList();
-                if (navigator.vibrate) navigator.vibrate(100);
+                playNotif();
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             }
         })
         .subscribe();
