@@ -32,7 +32,25 @@ if (myOldIds.size > 10) {
     localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
 }
 let lastMsgTime = 0;
-let chatHistory = new Map();
+let chatHistory = loadChatHistory();
+
+function loadChatHistory() {
+    try {
+        var saved = localStorage.getItem('jiranak_history');
+        if (saved) {
+            var parsed = JSON.parse(saved);
+            return new Map(parsed);
+        }
+    } catch(e) {}
+    return new Map();
+}
+
+function persistChatHistory() {
+    try {
+        var arr = [...chatHistory.entries()].slice(-20);
+        localStorage.setItem('jiranak_history', JSON.stringify(arr));
+    } catch(e) {}
+}
 let presenceRef = null;
 let myPresenceRef = null;
 let msgListener = null;
@@ -395,6 +413,7 @@ function enterPeopleScreen() {
                         cleanup();
                         localStorage.removeItem('jiranak_name');
                         chatHistory.clear();
+                        localStorage.removeItem('jiranak_history');
                         myOldIds.add(myId);
                         localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
                         myId = generateId();
@@ -630,7 +649,11 @@ function startChat(userId, userName, uLat, uLng) {
         const text = el.value.trim();
         if (!text || text.length > 500) return;
         const now = Date.now();
-        if (now - lastMsgTime < 500) return;
+        if (now - lastMsgTime < 500) {
+            sendBtn.style.opacity = '0.5';
+            setTimeout(function() { sendBtn.style.opacity = '1'; }, 300);
+            return;
+        }
         lastMsgTime = now;
 
         const thisMsgId = 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
@@ -671,10 +694,10 @@ function startChat(userId, userName, uLat, uLng) {
 
 function saveToHistory(userId, text, isMe) {
     if (!chatHistory.has(userId)) chatHistory.set(userId, []);
-    const h = chatHistory.get(userId);
+    var h = chatHistory.get(userId);
     h.push({ text, isMe });
-    // حد أقصى 100 رسالة لكل محادثة — لمنع تسريب الذاكرة
     if (h.length > MAX_HISTORY_PER_USER) h.shift();
+    persistChatHistory();
 }
 
 function addMsg(text, isMe, delivered = true, msgId = null) {
