@@ -260,11 +260,13 @@ function startChat(userId, userName, uLat, uLng) {
     }
 
     // إعداد الإرسال
-    const input = document.getElementById('msgInput');
     const sendBtn = document.getElementById('sendBtn');
+    const inputEl = document.getElementById('msgInput');
+    inputEl.setAttribute('maxlength', '500');
 
     const sendMsg = () => {
-        const text = input.value.trim();
+        const el = document.getElementById('msgInput');
+        const text = el.value.trim();
         if (!text || text.length > 500) return;
         const now = Date.now();
         if (now - lastMsgTime < 500) return;
@@ -272,7 +274,8 @@ function startChat(userId, userName, uLat, uLng) {
 
         addMsg(text, true, false);
         saveToHistory(userId, text, true);
-        input.value = '';
+        el.value = '';
+        el.focus();
 
         // إرسال عبر Firebase
         db.ref('msgs/' + userId).push({
@@ -291,15 +294,9 @@ function startChat(userId, userName, uLat, uLng) {
         });
     };
 
-    const newSend = sendBtn.cloneNode(true);
-    sendBtn.parentNode.replaceChild(newSend, sendBtn);
-    newSend.addEventListener('click', sendMsg);
-
-    const newInput = input.cloneNode(true);
-    newInput.setAttribute('maxlength', '500');
-    input.parentNode.replaceChild(newInput, input);
-    newInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMsg(); });
-    newInput.focus();
+    sendBtn.onclick = sendMsg;
+    inputEl.onkeypress = (e) => { if (e.key === 'Enter') sendMsg(); };
+    inputEl.focus();
 
     document.getElementById('backToPeople').onclick = () => {
         document.getElementById('chatMessages').innerHTML = '';
