@@ -1,39 +1,29 @@
 // ========================================
 // جيرانك - Jiranak
-// دردشة مجهولة مع الجيران
+// دردشة مجهولة مع الجيران (Firebase)
 // ========================================
 
-const SUPABASE_URL = 'https://hocxgsvrosyphgjpsxfh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvY3hnc3Zyb3N5cGhnanBzeGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Nzk3ODYsImV4cCI6MjA5MDI1NTc4Nn0.2NJmnwxT30IJBxuKrbWB3m_3vNfmPq7YmJs4PSiB0YU';
+const firebaseConfig = {
+    apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
+    authDomain: "jiranak-e9ee2.firebaseapp.com",
+    databaseURL: "https://jiranak-e9ee2-default-rtdb.firebaseio.com",
+    projectId: "jiranak-e9ee2",
+    storageBucket: "jiranak-e9ee2.firebasestorage.app",
+    messagingSenderId: "196785031299",
+    appId: "1:196785031299:web:08147b2c4fc0023d2b73b6"
+};
 
-let sb = null;
+let db;
 let myId = localStorage.getItem('jiranak_id') || crypto.randomUUID();
 localStorage.setItem('jiranak_id', myId);
 let myName = '';
 let myLat = 0;
 let myLng = 0;
 let currentChatUser = null;
-let presenceChannel = null;
-let msgChannel = null;
-let nearbyUsers = new Map();
 let unreadFrom = new Set();
 let myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]'));
 let lastMsgTime = 0;
-
-// صوت تنبيه بسيط
-function playNotif() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 800;
-        gain.gain.value = 0.3;
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-    } catch (e) {}
-}
+let presenceRef, myPresenceRef, msgListener;
 
 const AVATARS = ['😎','🦊','🐱','🦁','🐸','🦉','🐼','🐨','🦋','🌸','⚡','🔥','🌙','🎭','👻','🤖','🎯','💎','🌈','🍀'];
 const GRADIENTS = [
@@ -55,10 +45,24 @@ function hashCode(str) {
     return Math.abs(h);
 }
 
+function playNotif() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 800; gain.gain.value = 0.3;
+        osc.start(); osc.stop(ctx.currentTime + 0.15);
+    } catch (e) {}
+}
+
 // ---- تشغيل ----
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Firebase init
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
 
     const savedName = localStorage.getItem('jiranak_name');
     if (savedName) {
@@ -102,15 +106,10 @@ function initLanding() {
         requestLocation();
     };
 
-    input.onkeypress = (e) => {
-        if (e.key === 'Enter') joinBtn.click();
-    };
+    input.onkeypress = (e) => { if (e.key === 'Enter') joinBtn.click(); };
 
     document.querySelectorAll('.name-chip').forEach(chip => {
-        chip.onclick = () => {
-            input.value = chip.dataset.name;
-            joinBtn.click();
-        };
+        chip.onclick = () => { input.value = chip.dataset.name; joinBtn.click(); };
     });
 }
 
@@ -125,11 +124,7 @@ function requestLocation() {
     }
 
     navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            myLat = pos.coords.latitude;
-            myLng = pos.coords.longitude;
-            enterPeopleScreen();
-        },
+        (pos) => { myLat = pos.coords.latitude; myLng = pos.coords.longitude; enterPeopleScreen(); },
         () => {
             if (btn) { btn.textContent = 'ادخل'; btn.disabled = false; }
             alert('لازم تسمح بتحديد الموقع عشان تشوف جيرانك!');
@@ -147,56 +142,45 @@ function enterPeopleScreen() {
     document.getElementById('onlineCount').textContent = 'جاري الاتصال...';
     history.pushState({ screen: 'people' }, '', '');
 
-    // Presence - من متصل
-    presenceChannel = sb.channel('jiranak-room', {
-        config: { presence: { key: myId } }
+    presenceRef = db.ref('online');
+    myPresenceRef = presenceRef.child(myId);
+
+    // سجّل حضوري
+    myPresenceRef.set({ name: myName, lat: myLat, lng: myLng, t: firebase.database.ServerValue.TIMESTAMP });
+    myPresenceRef.onDisconnect().remove(); // يحذف تلقائياً عند الخروج
+
+    // استمع للمتصلين
+    presenceRef.on('value', (snap) => {
+        const data = snap.val() || {};
+        document.getElementById('onlineCount').textContent = '✅ متصل';
+        renderPeopleFromData(data);
     });
 
-    presenceChannel
-        .on('presence', { event: 'sync' }, () => {
-            nearbyUsers.clear();
-            const state = presenceChannel.presenceState();
-            Object.values(state).flat().forEach(u => {
-                if (u.uid && u.uid !== myId && !myOldIds.has(u.uid)) {
-                    nearbyUsers.set(u.uid, u);
-                }
-            });
-            renderPeopleList();
-        })
-        .subscribe(async (status) => {
-            if (status === 'SUBSCRIBED') {
-                document.getElementById('onlineCount').textContent = '✅ متصل';
-                await presenceChannel.track({ uid: myId, name: myName, lat: myLat, lng: myLng });
-            } else if (status === 'CHANNEL_ERROR') {
-                document.getElementById('onlineCount').textContent = '❌ خطأ في الاتصال';
-            }
-        });
+    // استمع للرسائل الموجهة لي
+    const myMsgsRef = db.ref('msgs/' + myId);
+    msgListener = myMsgsRef.on('child_added', (snap) => {
+        const msg = snap.val();
+        if (!msg) return;
 
-    // استماع للرسائل الجديدة من جدول messages
-    msgChannel = sb.channel('db-messages')
-        .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `to_id=eq.${myId}`
-        }, (payload) => {
-            const msg = payload.new;
-            if (currentChatUser && currentChatUser.uid === msg.from_id) {
-                addMsg(msg.text, false);
-                playNotif();
-                if (navigator.vibrate) navigator.vibrate(50);
-            } else {
-                unreadFrom.add(msg.from_id);
-                renderPeopleList();
-                playNotif();
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-            }
-        })
-        .subscribe();
+        if (currentChatUser && currentChatUser.id === msg.from) {
+            addMsg(msg.text, false);
+            playNotif();
+            if (navigator.vibrate) navigator.vibrate(50);
+        } else {
+            unreadFrom.add(msg.from);
+            const data = {};
+            presenceRef.once('value', s => { renderPeopleFromData(s.val() || {}); });
+            playNotif();
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        }
+
+        // حذف الرسالة بعد قراءتها
+        snap.ref.remove();
+    });
 
     document.getElementById('backToLanding').onclick = async () => {
         localStorage.removeItem('jiranak_name');
-        await cleanup();
+        cleanup();
         myOldIds.add(myId);
         localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
         myId = crypto.randomUUID();
@@ -207,11 +191,18 @@ function enterPeopleScreen() {
     document.getElementById('shareBtn')?.addEventListener('click', shareLink);
 }
 
-function renderPeopleList() {
+function renderPeopleFromData(data) {
     const list = document.getElementById('peopleList');
     const noPeople = document.getElementById('noPeople');
     const count = document.getElementById('onlineCount');
-    const users = Array.from(nearbyUsers.values());
+
+    const users = [];
+    Object.entries(data).forEach(([id, u]) => {
+        if (id !== myId && !myOldIds.has(id) && u.name) {
+            users.push({ id, ...u });
+        }
+    });
+
     count.textContent = `${users.length} جار متصل`;
 
     if (users.length === 0) {
@@ -227,11 +218,11 @@ function renderPeopleList() {
     list.innerHTML = users.map((u, i) => {
         const dist = getDistance(u.lat, u.lng);
         const distText = dist < 1 ? `${Math.round(dist * 1000)} متر` : `${dist.toFixed(1)} كم`;
-        const hasUnread = unreadFrom.has(u.uid);
+        const hasUnread = unreadFrom.has(u.id);
         return `
-            <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" onclick="startChat('${u.uid}')">
-                <div class="person-avatar" style="background:${getGradient(u.uid)}">
-                    ${getAvatar(u.uid)}
+            <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" onclick="startChat('${u.id}','${esc(u.name)}',${u.lat},${u.lng})">
+                <div class="person-avatar" style="background:${getGradient(u.id)}">
+                    ${getAvatar(u.id)}
                     ${hasUnread ? '<span class="unread-dot"></span>' : ''}
                 </div>
                 <div class="person-info">
@@ -244,59 +235,41 @@ function renderPeopleList() {
 }
 
 // ========== SCREEN 3: Chat ==========
-function startChat(userId) {
-    const user = nearbyUsers.get(userId);
-    if (!user) return;
+function startChat(userId, userName, uLat, uLng) {
     unreadFrom.delete(userId);
-    renderPeopleList();
-    currentChatUser = user;
+    currentChatUser = { id: userId, name: userName, lat: uLat, lng: uLng };
     showScreen('chatScreen');
     history.pushState({ screen: 'chat' }, '', '');
 
-    const dist = getDistance(user.lat, user.lng);
+    const dist = getDistance(uLat, uLng);
     const distText = dist < 1 ? `${Math.round(dist * 1000)} متر` : `${dist.toFixed(1)} كم`;
-    document.getElementById('chatWith').textContent = user.name;
+    document.getElementById('chatWith').textContent = userName;
     document.getElementById('chatDistance').textContent = `📍 يبعد ${distText}`;
 
-    const msgs = document.getElementById('chatMessages');
-    msgs.innerHTML = '';
-    addSystemMsg(`بدأت محادثة مع ${user.name} 💨`);
-
-    // جلب الرسائل الموجودة
-    loadExistingMessages(userId);
-
-    // مراقبة خروج الطرف الآخر
-    const checkLeave = setInterval(() => {
-        if (!nearbyUsers.has(userId) && currentChatUser?.uid === userId) {
-            addSystemMsg(`${user.name} طلع 👋`);
-            clearInterval(checkLeave);
-        }
-    }, 3000);
+    document.getElementById('chatMessages').innerHTML = '';
+    addSystemMsg(`بدأت محادثة مع ${userName} 💨`);
 
     // إعداد الإرسال
     const input = document.getElementById('msgInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    const sendMsg = async () => {
+    const sendMsg = () => {
         const text = input.value.trim();
         if (!text || text.length > 500) return;
         const now = Date.now();
-        if (now - lastMsgTime < 1000) return;
+        if (now - lastMsgTime < 500) return;
         lastMsgTime = now;
 
         addMsg(text, true);
         input.value = '';
 
-        // إدخال الرسالة في جدول messages
-        const { error } = await sb.from('messages').insert({
-            from_id: myId,
-            to_id: userId,
-            from_name: myName,
-            text: text
+        // إرسال عبر Firebase - فوري
+        db.ref('msgs/' + userId).push({
+            from: myId,
+            name: myName,
+            text: text,
+            t: firebase.database.ServerValue.TIMESTAMP
         });
-        if (error) {
-            addSystemMsg('❌ ' + error.message);
-        }
     };
 
     const newSend = sendBtn.cloneNode(true);
@@ -310,24 +283,10 @@ function startChat(userId) {
     newInput.focus();
 
     document.getElementById('backToPeople').onclick = () => {
-        clearInterval(checkLeave);
         document.getElementById('chatMessages').innerHTML = '';
         currentChatUser = null;
         showScreen('peopleScreen');
     };
-}
-
-async function loadExistingMessages(otherUserId) {
-    const { data } = await sb.from('messages')
-        .select('*')
-        .or(`and(from_id.eq.${myId},to_id.eq.${otherUserId}),and(from_id.eq.${otherUserId},to_id.eq.${myId})`)
-        .order('created_at', { ascending: true });
-
-    if (data) {
-        data.forEach(msg => {
-            addMsg(msg.text, msg.from_id === myId);
-        });
-    }
 }
 
 function addMsg(text, isMe) {
@@ -350,7 +309,7 @@ function addSystemMsg(text) {
     msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ========== زر الرجوع في المتصفح ==========
+// ========== زر الرجوع ==========
 window.addEventListener('popstate', () => {
     if (currentChatUser) {
         document.getElementById('chatMessages').innerHTML = '';
@@ -388,16 +347,12 @@ function shareLink() {
     }
 }
 
-async function cleanup() {
-    if (presenceChannel) { await presenceChannel.untrack(); presenceChannel.unsubscribe(); presenceChannel = null; }
-    if (msgChannel) { msgChannel.unsubscribe(); msgChannel = null; }
-    nearbyUsers.clear();
+function cleanup() {
+    if (myPresenceRef) myPresenceRef.remove();
+    if (presenceRef) presenceRef.off();
+    if (msgListener) db.ref('msgs/' + myId).off();
     unreadFrom.clear();
     currentChatUser = null;
 }
 
-window.addEventListener('beforeunload', () => {
-    // حذف كل رسائلي عند الخروج
-    if (sb) sb.from('messages').delete().or(`from_id.eq.${myId},to_id.eq.${myId}`).then(() => {});
-    cleanup();
-});
+window.addEventListener('beforeunload', cleanup);
