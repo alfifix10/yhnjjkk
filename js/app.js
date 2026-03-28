@@ -84,6 +84,7 @@ try { myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '
 var blockedUsers;
 try { blockedUsers = new Set(JSON.parse(localStorage.getItem('jiranak_blocked') || '[]')); } catch(e) { blockedUsers = new Set(); }
 var lastMsgTime = 0;
+var myGpsAccuracy = 0;
 var msgsSentInMinute = 0;
 var minuteStart = Date.now();
 var chatHistory = loadChatHistory();
@@ -127,6 +128,17 @@ const GRADIENTS = [
     'linear-gradient(135deg, #e17055, #d63031)',
     'linear-gradient(135deg, #a29bfe, #fd79a8)',
 ];
+
+function formatDistance(lat, lng) {
+    if (myLat === 0 || myLng === 0 || !lat || !lng) return 'متصل الآن';
+    var dist = getDistance(lat, lng);
+    var meters = Math.round(dist * 1000);
+    // لو دقة GPS ضعيفة (أكثر من 5 كم) المسافة غير موثوقة
+    if (myGpsAccuracy > 5000) return '📍 غير دقيق';
+    if (meters < 50) return 'قريب جداً';
+    if (meters < 1000) return meters + ' متر';
+    return dist.toFixed(1) + ' كم';
+}
 
 function getAvatar(id) { return AVATARS[hashCode(id) % AVATARS.length]; }
 function getGradient(id) { return GRADIENTS[hashCode(id) % GRADIENTS.length]; }
@@ -329,15 +341,14 @@ function requestLocation() {
 
     // محاولة واحدة سريعة أولاً
     navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        function(pos) {
             myLat = pos.coords.latitude;
             myLng = pos.coords.longitude;
+            myGpsAccuracy = pos.coords.accuracy || 0;
             localStorage.setItem('jiranak_lat', myLat);
             localStorage.setItem('jiranak_lng', myLng);
             enteredFromGeo = true;
             enterPeopleScreen();
-
-            // بعد الدخول، تابع بـ watchPosition لتحسين الدقة
             startGeoWatch();
         },
         () => {
@@ -355,10 +366,10 @@ function startGeoWatch() {
         function(pos) {
             var newLat = pos.coords.latitude;
             var newLng = pos.coords.longitude;
-            // كشف GPS مزيف: لو قفز أكثر من 50 كم فجأة = مريب
+            myGpsAccuracy = pos.coords.accuracy || 0;
             if (myLat !== 0 && myLng !== 0) {
                 var jump = getDistance(newLat, newLng);
-                if (jump > 50) return; // تجاهل القفزة المريبة
+                if (jump > 50) return;
             }
             myLat = newLat;
             myLng = newLng;
@@ -537,15 +548,8 @@ function renderPeopleFromData(data) {
     }
 
     list.innerHTML = users.map((u, i) => {
-        let distText = '';
-        if (myLat !== 0 && myLng !== 0 && u.lat && u.lng) {
-            const dist = getDistance(u.lat, u.lng);
-            const meters = Math.round(dist * 1000);
-            distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
-        } else {
-            distText = 'متصل الآن';
-        }
-        const hasUnread = unreadFrom.has(u.id);
+        var distText = formatDistance(u.lat, u.lng);
+        var hasUnread = unreadFrom.has(u.id);
         return `
             <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat}" data-ulng="${u.lng}">
                 <div class="person-avatar" style="background:${getGradient(u.id)}">
@@ -577,14 +581,9 @@ function startChat(userId, userName, uLat, uLng) {
     showScreen('chatScreen');
     history.pushState({ screen: 'chat' }, '', '');
 
-    let distText = 'متصل';
-    if (myLat !== 0 && myLng !== 0 && uLat && uLng) {
-        const dist = getDistance(uLat, uLng);
-        const meters = Math.round(dist * 1000);
-        distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
-    }
+    var distText = formatDistance(uLat, uLng);
     document.getElementById('chatWith').textContent = userName;
-    document.getElementById('chatDistance').textContent = myLat !== 0 ? `📍 يبعد ${distText}` : `🟢 ${distText}`;
+    document.getElementById('chatDistance').textContent = '📍 ' + distText;
 
     var msgsDiv = document.getElementById('chatMessages');
     msgsDiv.innerHTML = '';
