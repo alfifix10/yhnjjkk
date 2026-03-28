@@ -262,6 +262,9 @@ function startChat(userId) {
     msgs.innerHTML = '';
     addSystemMsg(`بدأت محادثة مع ${user.name} 💨`);
 
+    // جلب الرسائل الموجودة
+    loadExistingMessages(userId);
+
     // مراقبة خروج الطرف الآخر
     const checkLeave = setInterval(() => {
         if (!nearbyUsers.has(userId) && currentChatUser?.uid === userId) {
@@ -314,6 +317,19 @@ function startChat(userId) {
         // حذف الرسائل القديمة
         sb.from('messages').delete().or(`from_id.eq.${myId},to_id.eq.${myId}`).then(() => {});
     };
+}
+
+async function loadExistingMessages(otherUserId) {
+    const { data } = await sb.from('messages')
+        .select('*')
+        .or(`and(from_id.eq.${myId},to_id.eq.${otherUserId}),and(from_id.eq.${otherUserId},to_id.eq.${myId})`)
+        .order('created_at', { ascending: true });
+
+    if (data) {
+        data.forEach(msg => {
+            addMsg(msg.text, msg.from_id === myId);
+        });
+    }
 }
 
 function addMsg(text, isMe) {
