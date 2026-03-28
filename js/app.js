@@ -14,23 +14,72 @@ const firebaseConfig = {
 };
 
 let db;
+
+// بصمة الجهاز — ثابتة حتى لو مسح localStorage أو فتح incognito
+function getDeviceFingerprint() {
+    var parts = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+        new Date().getTimezoneOffset(),
+        navigator.hardwareConcurrency || 0,
+        navigator.maxTouchPoints || 0
+    ];
+    // Canvas fingerprint
+    try {
+        var c = document.createElement('canvas');
+        var ctx = c.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillText('jiranak-fp', 2, 2);
+        parts.push(c.toDataURL().slice(-50));
+    } catch(e) {}
+    // Hash
+    var str = parts.join('|');
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash = hash & hash;
+    }
+    return 'fp-' + Math.abs(hash).toString(36);
+}
+
 function generateId() {
     if (crypto && crypto.randomUUID) return crypto.randomUUID();
-    return 'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
+    return 'xxxx-xxxx-xxxx'.replace(/x/g, function() { return Math.floor(Math.random() * 16).toString(16); });
 }
-let myId = localStorage.getItem('jiranak_id') || generateId();
-localStorage.setItem('jiranak_id', myId);
-let myName = '';
-let myLat = parseFloat(localStorage.getItem('jiranak_lat')) || 0;
-let myLng = parseFloat(localStorage.getItem('jiranak_lng')) || 0;
-let currentChatUser = null;
-let unreadFrom = new Set();
-let myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]'));
-// تنظيف: نحتفظ بآخر 10 هويات قديمة فقط
-if (myOldIds.size > 10) {
-    myOldIds = new Set([...myOldIds].slice(-10));
-    localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
+
+// استرجاع الهوية: localStorage أولاً، ثم بصمة الجهاز، ثم إنشاء جديد
+function getOrCreateId() {
+    var stored = localStorage.getItem('jiranak_id');
+    if (stored) return stored;
+
+    // لو مسح localStorage، نحاول نسترجع من cookie
+    var cookieMatch = document.cookie.match(/jiranak_id=([^;]+)/);
+    if (cookieMatch) {
+        localStorage.setItem('jiranak_id', cookieMatch[1]);
+        return cookieMatch[1];
+    }
+
+    // هوية جديدة مبنية على بصمة الجهاز
+    var fp = getDeviceFingerprint();
+    var id = fp + '-' + generateId().slice(0, 8);
+    localStorage.setItem('jiranak_id', id);
+    // حفظ نسخة في cookie (تبقى حتى لو مسح localStorage)
+    document.cookie = 'jiranak_id=' + id + ';max-age=31536000;path=/;SameSite=Lax';
+    return id;
 }
+
+var myId = getOrCreateId();
+var myName = '';
+var myLat = parseFloat(localStorage.getItem('jiranak_lat')) || 0;
+var myLng = parseFloat(localStorage.getItem('jiranak_lng')) || 0;
+var currentChatUser = null;
+var unreadFrom = new Set();
+var blockedUsers = new Set(JSON.parse(localStorage.getItem('jiranak_blocked') || '[]'));
+var lastMsgTime = 0;
+var msgsSentInMinute = 0;
+var minuteStart = Date.now();
 let lastMsgTime = 0;
 let chatHistory = loadChatHistory();
 
@@ -297,16 +346,23 @@ function requestLocation() {
 function startGeoWatch() {
     if (geoWatchId !== null) return;
     geoWatchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            myLat = pos.coords.latitude;
-            myLng = pos.coords.longitude;
+        function(pos) {
+            var newLat = pos.coords.latitude;
+            var newLng = pos.coords.longitude;
+            // كشف GPS مزيف: لو قفز أكثر من 50 كم فجأة = مريب
+            if (myLat !== 0 && myLng !== 0) {
+                var jump = getDistance(newLat, newLng);
+                if (jump > 50) return; // تجاهل القفزة المريبة
+            }
+            myLat = newLat;
+            myLng = newLng;
             localStorage.setItem('jiranak_lat', myLat);
             localStorage.setItem('jiranak_lng', myLng);
             if (myPresenceRef) {
                 myPresenceRef.update({ lat: roundCoord(myLat), lng: roundCoord(myLng) });
             }
         },
-        () => {},
+        function() {},
         { enableHighAccuracy: true, maximumAge: 0 }
     );
 }
@@ -464,7 +520,7 @@ function renderPeopleFromData(data) {
 
     const users = [];
     Object.entries(data).forEach(([id, u]) => {
-        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
+        if (id !== myId && !blockedUsers.has(id) && u.name) {
             users.push({ id, ...u });
         }
     });
@@ -636,13 +692,24 @@ function startChat(userId, userName, uLat, uLng) {
     const sendBtn = document.getElementById('sendBtn');
 
     const sendMsg = () => {
-        const el = document.getElementById('msgInput');
-        const text = el.value.trim();
+        var el = document.getElementById('msgInput');
+        var text = el.value.trim();
         if (!text || text.length > 500) return;
-        const now = Date.now();
+        var now = Date.now();
+        // حد 500ms بين كل رسالة
         if (now - lastMsgTime < 500) {
             sendBtn.style.opacity = '0.5';
             setTimeout(function() { sendBtn.style.opacity = '1'; }, 300);
+            return;
+        }
+        // حد 20 رسالة بالدقيقة
+        if (now - minuteStart > 60000) {
+            msgsSentInMinute = 0;
+            minuteStart = now;
+        }
+        msgsSentInMinute++;
+        if (msgsSentInMinute > 20) {
+            addSystemMsg('⚠️ أرسلت رسائل كثيرة، انتظر قليلاً');
             return;
         }
         lastMsgTime = now;
