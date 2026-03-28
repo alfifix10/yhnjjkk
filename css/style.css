@@ -135,23 +135,28 @@ body {
 @media (min-width: 769px) {
     .screen {
         background: var(--dark);
-        justify-content: center;
-        align-items: center;
     }
 
-    /* التوبار داخل الإطار */
+    /* التوبار يأخذ عرض كامل لكن المحتوى بالداخل محدود */
     #peopleScreen .topbar,
     #chatScreen .topbar {
-        max-width: 520px;
+        width: 520px;
         margin: 0 auto;
         border-radius: 24px 24px 0 0;
         border: 1px solid var(--glass-border);
         border-bottom: 1px solid var(--glass-border);
         background: var(--dark-2);
+        flex-shrink: 0;
     }
 
+    #peopleScreen {
+        align-items: center;
+    }
     #peopleScreen .screen-content {
         padding-top: 0;
+        width: 520px;
+        flex: 1;
+        justify-content: flex-start;
     }
 
     .people-frame {
@@ -161,14 +166,16 @@ body {
 
     #chatScreen {
         padding: 0;
+        align-items: center;
     }
     .chat-frame {
+        width: 520px;
         background: var(--dark-2);
         border: 1px solid var(--glass-border);
         border-top: none;
         border-radius: 0 0 24px 24px;
-        height: calc(100vh - 120px);
-        max-height: 700px;
+        flex: 1;
+        min-height: 0;
         overflow: hidden;
     }
     .chat-input-bar {

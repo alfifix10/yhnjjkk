@@ -230,7 +230,8 @@ function renderPeopleFromData(data) {
 
     list.innerHTML = users.map((u, i) => {
         const dist = getDistance(u.lat, u.lng);
-        const distText = dist < 0.5 ? 'قريب منك' : dist < 1 ? `${Math.round(dist * 1000)} متر` : `${dist.toFixed(1)} كم`;
+        const meters = Math.round(dist * 1000);
+        const distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
         const hasUnread = unreadFrom.has(u.id);
         return `
             <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" onclick="startChat('${u.id}','${esc(u.name)}',${u.lat},${u.lng})">
@@ -256,7 +257,8 @@ function startChat(userId, userName, uLat, uLng) {
     history.pushState({ screen: 'chat' }, '', '');
 
     const dist = getDistance(uLat, uLng);
-    const distText = dist < 1 ? `${Math.round(dist * 1000)} متر` : `${dist.toFixed(1)} كم`;
+    const meters = Math.round(dist * 1000);
+    const distText = meters < 50 ? 'قريب جداً' : meters < 1000 ? `${meters} متر` : `${dist.toFixed(1)} كم`;
     document.getElementById('chatWith').textContent = userName;
     document.getElementById('chatDistance').textContent = `📍 يبعد ${distText}`;
 
