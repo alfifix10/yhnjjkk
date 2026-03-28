@@ -381,18 +381,16 @@ function enterPeopleScreen() {
     presenceRef = db.ref('online');
     myPresenceRef = presenceRef.child(myId);
 
-    // مراقبة اتصال Firebase
+    // مراقبة اتصال Firebase — يظهر البانر فقط لو انقطع بعد ما كان متصل
+    var wasConnected = false;
     db.ref('.info/connected').on('value', function(snap) {
         var banner = document.getElementById('offlineBanner');
-        if (banner) {
-            if (snap.val() === true) {
-                banner.style.display = 'none';
-                if (myPresenceRef) {
-                    myPresenceRef.onDisconnect().remove();
-                }
-            } else {
-                banner.style.display = 'flex';
-            }
+        if (snap.val() === true) {
+            wasConnected = true;
+            if (banner) banner.style.display = 'none';
+            if (myPresenceRef) myPresenceRef.onDisconnect().remove();
+        } else if (wasConnected && banner) {
+            banner.style.display = 'flex';
         }
     });
 
