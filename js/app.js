@@ -438,13 +438,27 @@ function startChat(userId, userName, uLat, uLng) {
     if (partnerPresenceRef) partnerPresenceRef.off();
     partnerPresenceRef = db.ref('online/' + userId);
     partnerPresenceRef.on('value', (snap) => {
-        const statusEl = document.getElementById('chatDistance');
+        var statusEl = document.getElementById('chatDistance');
+        var nameEl = document.getElementById('chatWith');
         if (snap.exists()) {
-            statusEl.textContent = `📍 يبعد ${distText}`;
+            var data = snap.val();
+            // تحديث الاسم إذا تغيّر
+            if (data.name && data.name !== nameEl.textContent) {
+                var oldName = nameEl.textContent;
+                nameEl.textContent = data.name;
+                currentChatUser.name = data.name;
+                addSystemMsg('غيّر اسمه إلى: ' + data.name);
+            }
+            // تحديث المسافة
+            if (data.lat && data.lng && myLat !== 0) {
+                var newDist = getDistance(data.lat, data.lng);
+                var m = Math.round(newDist * 1000);
+                distText = m < 50 ? 'قريب جداً' : m < 1000 ? m + ' متر' : newDist.toFixed(1) + ' كم';
+            }
+            statusEl.textContent = '📍 يبعد ' + distText;
             statusEl.style.color = '';
             partnerWasOnline = true;
         } else if (partnerWasOnline) {
-            // يظهر الرسالة مرة واحدة فقط
             statusEl.textContent = '⚫ غير متصل';
             statusEl.style.color = '#e17055';
             addSystemMsg('الطرف الثاني غادر المحادثة');
