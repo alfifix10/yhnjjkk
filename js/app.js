@@ -66,13 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
 
-    const savedName = localStorage.getItem('jiranak_name');
-    if (savedName) {
-        myName = savedName;
-        requestLocation();
-    } else {
-        initLanding();
-    }
+    // دائماً نعرض صفحة الدخول — الاسم المحفوظ يكون مجرد اقتراح
+    initLanding();
 });
 
 function initParticles() {
@@ -93,7 +88,8 @@ function initLanding() {
     showScreen('landingScreen');
     const input = document.getElementById('nicknameInput');
     const joinBtn = document.getElementById('joinBtn');
-    input.value = '';
+    const savedName = localStorage.getItem('jiranak_name');
+    input.value = savedName || '';
     setTimeout(() => input.focus(), 300);
 
     joinBtn.onclick = () => {

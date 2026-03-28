@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏘️</text></svg>">
-    <link rel="stylesheet" href="css/style.css?v=11">
+    <link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
     <!-- Particles -->
@@ -46,13 +46,13 @@
     <!-- Screen 2: Nearby People -->
     <div id="peopleScreen" class="screen">
         <div class="topbar">
-            <button id="backToLanding" class="back-btn" title="خروج وتغيير الهوية">🚪</button>
             <div class="topbar-info">
                 <span id="myName" class="my-name"></span>
                 <button id="editNameBtn" class="edit-name-btn" title="تعديل الاسم">✏️</button>
                 <span id="onlineCount" class="online-badge">0 جار متصل</span>
+                <div class="pulse-dot"></div>
             </div>
-            <div class="pulse-dot"></div>
+            <button id="backToLanding" class="back-btn" title="تغيير الاسم والخروج">↩</button>
         </div>
         <div class="screen-content people-content">
             <div class="people-frame">
@@ -95,6 +95,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-    <script src="js/app.js?v=35"></script>
+    <script src="js/app.js?v=36"></script>
 </body>
 </html>
