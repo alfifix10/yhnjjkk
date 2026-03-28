@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏘️</text></svg>">
-    <link rel="stylesheet" href="css/style.css?v=15">
+    <link rel="stylesheet" href="css/style.css?v=16">
 </head>
 <body>
     <!-- Particles -->
@@ -61,12 +61,16 @@
             <div class="people-frame">
                 <h2>الجيران المتصلين الآن</h2>
                 <p class="hint">اختر شخص وابدأ الدردشة</p>
-                <div id="peopleList" class="people-list">
+                <div id="searchingSpinner" class="searching">
+                    <div class="spinner"></div>
+                    <p>جاري البحث عن جيران...</p>
+                </div>
+                <div id="peopleList" class="people-list" style="display:none">
                     <!-- يتم إضافتها ديناميكياً -->
                 </div>
                 <div id="noPeople" class="no-people" style="display:none">
                     <div class="empty-icon">👀</div>
-                    <p>ما فيه أحد قريب منك الآن</p>
+                    <p>ما فيه أحد متصل الآن</p>
                     <p class="hint">شارك الرابط مع جيرانك!</p>
                     <button id="shareBtn" class="btn-secondary">📤 شارك الرابط</button>
                 </div>
@@ -98,6 +102,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-    <script src="js/app.js?v=50"></script>
+    <script src="js/app.js?v=51"></script>
 </body>
 </html>

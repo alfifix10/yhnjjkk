@@ -255,6 +255,9 @@ function enterPeopleScreen() {
                 db.ref('online/' + id).remove();
             }
         });
+        // إخفاء spinner البحث
+        var spinner = document.getElementById('searchingSpinner');
+        if (spinner) spinner.style.display = 'none';
         document.getElementById('onlineCount').textContent = '✅ متصل';
         renderPeopleFromData(data);
     });
