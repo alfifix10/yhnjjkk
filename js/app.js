@@ -34,7 +34,9 @@ let msgListener = null;
 let partnerPresenceRef = null;
 let currentScreen = 'landing';
 let heartbeatInterval = null;
-let partnerWasOnline = true; // لمنع سبام "غادر"
+let partnerWasOnline = true;
+let blockedUsers = new Set(JSON.parse(localStorage.getItem('jiranak_blocked') || '[]'));
+let typingTimeout = null;
 
 const AVATARS = ['😎','🦊','🐱','🦁','🐸','🦉','🐼','🐨','🦋','🌸','⚡','🔥','🌙','🎭','👻','🤖','🎯','💎','🌈','🍀'];
 const GRADIENTS = [
@@ -268,6 +270,9 @@ function enterPeopleScreen() {
         const msg = snap.val();
         if (!msg) return;
 
+        // تجاهل رسائل المحظورين
+        if (blockedUsers.has(msg.from)) { snap.ref.remove(); return; }
+
         if (currentChatUser && currentChatUser.id === msg.from) {
             addMsg(msg.text, false);
             saveToHistory(msg.from, msg.text, false);
@@ -313,7 +318,7 @@ function renderPeopleFromData(data) {
 
     const users = [];
     Object.entries(data).forEach(([id, u]) => {
-        if (id !== myId && !myOldIds.has(id) && u.name) {
+        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
             users.push({ id, ...u });
         }
     });
@@ -410,6 +415,32 @@ function startChat(userId, userName, uLat, uLng) {
         }
     });
 
+    // زر الحظر
+    document.getElementById('blockBtn').onclick = () => {
+        if (confirm(`حظر ${userName}؟ لن تظهر رسائله بعد الآن.`)) {
+            blockedUsers.add(userId);
+            localStorage.setItem('jiranak_blocked', JSON.stringify([...blockedUsers]));
+            if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
+            currentChatUser = null;
+            currentScreen = 'people';
+            showScreen('peopleScreen');
+        }
+    };
+
+    // مؤشر "يكتب..."
+    var myTypingRef = db.ref('typing/' + userId + '/' + myId);
+    var partnerTypingRef2 = db.ref('typing/' + myId + '/' + userId);
+    var typingIndicator = document.getElementById('typingIndicator');
+    myTypingRef.onDisconnect().remove();
+
+    partnerTypingRef2.on('value', function(snap) {
+        if (snap.val()) {
+            typingIndicator.style.display = 'flex';
+        } else {
+            typingIndicator.style.display = 'none';
+        }
+    });
+
     const inputEl = document.getElementById('msgInput');
     const charCounter = document.getElementById('charCounter');
     inputEl.setAttribute('maxlength', '500');
@@ -422,6 +453,12 @@ function startChat(userId, userName, uLat, uLng) {
         } else {
             charCounter.style.display = 'none';
         }
+        // إرسال حالة "يكتب..."
+        db.ref('typing/' + userId + '/' + myId).set(true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            db.ref('typing/' + userId + '/' + myId).set(null);
+        }, 2000);
     };
 
     const sendBtn = document.getElementById('sendBtn');
@@ -464,6 +501,8 @@ function startChat(userId, userName, uLat, uLng) {
 
     document.getElementById('backToPeople').onclick = () => {
         if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
+        myTypingRef.set(null);
+        partnerTypingRef2.off();
         currentChatUser = null;
         currentScreen = 'people';
         showScreen('peopleScreen');

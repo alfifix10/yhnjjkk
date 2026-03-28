@@ -534,6 +534,27 @@ body {
     color: var(--accent);
     font-weight: 600;
 }
+.block-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(225, 112, 85, 0.3);
+    background: rgba(225, 112, 85, 0.1);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+.block-btn:hover { background: rgba(225, 112, 85, 0.25); }
+
+.typing-indicator small {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-right: 4px;
+}
+
 .ephemeral-badge {
     padding: 4px 12px;
     background: rgba(253, 121, 168, 0.12);

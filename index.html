@@ -11,7 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏘️</text></svg>">
-    <link rel="stylesheet" href="css/style.css?v=16">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6c5ce7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="css/style.css?v=17">
 </head>
 <body>
     <!-- Particles -->
@@ -86,11 +90,15 @@
                 <span id="chatWith" class="chat-with-name"></span>
                 <span id="chatDistance" class="distance-badge"></span>
             </div>
-            <div class="ephemeral-badge">💨 مؤقت</div>
+            <button type="button" id="blockBtn" class="block-btn" title="حظر">🚫</button>
         </div>
         <div class="chat-frame">
             <div id="chatMessages" class="chat-messages">
                 <!-- الرسائل -->
+            </div>
+            <div id="typingIndicator" class="typing-indicator" style="display:none">
+                <span></span><span></span><span></span>
+                <small>يكتب...</small>
             </div>
             <div class="chat-input-bar">
                 <span id="charCounter" class="char-counter" style="display:none"></span>
@@ -102,6 +110,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-    <script src="js/app.js?v=51"></script>
+    <script src="js/app.js?v=52"></script>
 </body>
 </html>
