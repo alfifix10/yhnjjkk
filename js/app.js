@@ -52,6 +52,13 @@ function hashCode(str) {
     return Math.abs(h);
 }
 
+// تقريب الإحداثيات — 3 خانات عشرية = دقة ~100 متر (حماية الخصوصية)
+function roundCoord(val) {
+    return Math.round(val * 1000) / 1000;
+}
+
+const MAX_HISTORY_PER_USER = 100;
+
 function playNotif() {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -90,14 +97,25 @@ document.addEventListener('DOMContentLoaded', () => {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
 
-    const savedName = localStorage.getItem('jiranak_name');
-    if (savedName && myLat !== 0 && myLng !== 0) {
-        // دخول فوري — عنده اسم وموقع محفوظين
-        myName = savedName;
-        enterPeopleScreen();
-    } else {
-        initLanding();
-    }
+    // تسجيل دخول مجهول — مطلوب لـ Security Rules
+    firebase.auth().signInAnonymously().then(() => {
+        const savedName = localStorage.getItem('jiranak_name');
+        if (savedName && myLat !== 0 && myLng !== 0) {
+            myName = savedName;
+            enterPeopleScreen();
+        } else {
+            initLanding();
+        }
+    }).catch(() => {
+        // لو فشل التوثيق، ادخل بدونه
+        const savedName = localStorage.getItem('jiranak_name');
+        if (savedName && myLat !== 0 && myLng !== 0) {
+            myName = savedName;
+            enterPeopleScreen();
+        } else {
+            initLanding();
+        }
+    });
 });
 
 function initParticles() {
@@ -176,9 +194,9 @@ function requestLocation() {
                 enterPeopleScreen();
             }
 
-            // حدّث موقعي في Firebase + أعد حساب المسافات
+            // حدّث موقعي في Firebase بإحداثيات مقرّبة
             if (myPresenceRef) {
-                myPresenceRef.update({ lat: myLat, lng: myLng });
+                myPresenceRef.update({ lat: roundCoord(myLat), lng: roundCoord(myLng) });
             }
         },
         () => {
@@ -207,7 +225,7 @@ function enterPeopleScreen() {
     presenceRef = db.ref('online');
     myPresenceRef = presenceRef.child(myId);
 
-    myPresenceRef.set({ name: myName, lat: myLat, lng: myLng, t: firebase.database.ServerValue.TIMESTAMP });
+    myPresenceRef.set({ name: myName, lat: roundCoord(myLat), lng: roundCoord(myLng), t: firebase.database.ServerValue.TIMESTAMP });
     myPresenceRef.onDisconnect().remove();
 
     // [FIX 2] heartbeat واحد فقط
@@ -429,7 +447,10 @@ function startChat(userId, userName, uLat, uLng) {
 
 function saveToHistory(userId, text, isMe) {
     if (!chatHistory.has(userId)) chatHistory.set(userId, []);
-    chatHistory.get(userId).push({ text, isMe });
+    const h = chatHistory.get(userId);
+    h.push({ text, isMe });
+    // حد أقصى 100 رسالة لكل محادثة — لمنع تسريب الذاكرة
+    if (h.length > MAX_HISTORY_PER_USER) h.shift();
 }
 
 function addMsg(text, isMe, delivered = true, msgId = null) {

@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "online": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['name', 'lat', 'lng', 't']) && newData.child('name').isString() && newData.child('name').val().length <= 20 && newData.child('lat').isNumber() && newData.child('lng').isNumber()"
+      }
+    },
+    "msgs": {
+      "$recipientId": {
+        "$msgId": {
+          ".read": true,
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['from', 'name', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length <= 500 && newData.child('name').isString() && newData.child('name').val().length <= 20"
+        }
+      }
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
