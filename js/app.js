@@ -268,12 +268,15 @@ function startChat(userId) {
         input.value = '';
 
         // إدخال الرسالة في جدول messages
-        await sb.from('messages').insert({
+        const { error } = await sb.from('messages').insert({
             from_id: myId,
             to_id: userId,
             from_name: myName,
             text: text
         });
+        if (error) {
+            addSystemMsg('❌ ' + error.message);
+        }
     };
 
     const newSend = sendBtn.cloneNode(true);
