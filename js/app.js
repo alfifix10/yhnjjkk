@@ -130,14 +130,15 @@ const GRADIENTS = [
 ];
 
 function formatDistance(lat, lng) {
-    if (myLat === 0 || myLng === 0 || !lat || !lng) return 'متصل الآن';
+    if (myLat === 0 || myLng === 0 || !lat || !lng) return 'متصل';
     var dist = getDistance(lat, lng);
-    var meters = Math.round(dist * 1000);
-    // لو دقة GPS ضعيفة (أكثر من 5 كم) المسافة غير موثوقة
-    if (myGpsAccuracy > 5000) return '📍 غير دقيق';
-    if (meters < 50) return 'قريب جداً';
-    if (meters < 1000) return meters + ' متر';
-    return dist.toFixed(1) + ' كم';
+    if (isNaN(dist) || dist === Infinity) return 'متصل';
+    // وصف بسيط بدل أرقام غير دقيقة
+    if (dist < 0.1) return '🟢 قريب جداً';
+    if (dist < 1) return '🟢 في الجوار';
+    if (dist < 10) return '🟡 في نفس المدينة';
+    if (dist < 100) return '🟠 في نفس المنطقة';
+    return '⚪ بعيد';
 }
 
 function getAvatar(id) { return AVATARS[hashCode(id) % AVATARS.length]; }
