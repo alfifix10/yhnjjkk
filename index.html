@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#6c5ce7">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="stylesheet" href="css/style.css?v=18">
+    <link rel="stylesheet" href="css/style.css?v=19">
 </head>
 <body>
     <!-- Particles -->
@@ -109,8 +109,18 @@
         </div>
     </div>
 
+    <!-- Modal -->
+    <div id="modalOverlay" class="modal-overlay" style="display:none">
+        <div class="modal-card">
+            <h3 id="modalTitle" class="modal-title"></h3>
+            <p id="modalMessage" class="modal-message"></p>
+            <input type="text" id="modalInput" class="modal-input" style="display:none" autocomplete="off">
+            <div id="modalButtons" class="modal-buttons"></div>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-    <script src="js/app.js?v=57"></script>
+    <script src="js/app.js?v=58"></script>
 </body>
 </html>

@@ -70,12 +70,20 @@ function roundCoord(val) {
 
 const MAX_HISTORY_PER_USER = 100;
 
+let _audioCtx = null;
+function getAudioContext() {
+    if (!_audioCtx || _audioCtx.state === 'closed') {
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    return _audioCtx;
+}
+
 function playNotif() {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = getAudioContext();
         const t = ctx.currentTime;
 
-        // النغمة الأولى — pop قصير
         const o1 = ctx.createOscillator();
         const g1 = ctx.createGain();
         o1.connect(g1); g1.connect(ctx.destination);
@@ -87,7 +95,6 @@ function playNotif() {
         o1.start(t);
         o1.stop(t + 0.08);
 
-        // النغمة الثانية — أعلى بشوي بعد فاصل قصير
         const o2 = ctx.createOscillator();
         const g2 = ctx.createGain();
         o2.connect(g2); g2.connect(ctx.destination);
@@ -100,6 +107,66 @@ function playNotif() {
         o2.start(t + 0.1);
         o2.stop(t + 0.2);
     } catch (e) {}
+}
+
+function showModal(opts) {
+    const overlay = document.getElementById('modalOverlay');
+    const titleEl = document.getElementById('modalTitle');
+    const msgEl = document.getElementById('modalMessage');
+    const inputEl = document.getElementById('modalInput');
+    const buttonsEl = document.getElementById('modalButtons');
+
+    titleEl.textContent = opts.title || '';
+    msgEl.textContent = opts.message || '';
+
+    if (opts.input) {
+        inputEl.style.display = 'block';
+        inputEl.value = opts.inputValue || '';
+        inputEl.maxLength = opts.inputMax || 20;
+    } else {
+        inputEl.style.display = 'none';
+    }
+
+    buttonsEl.innerHTML = '';
+
+    const buttons = opts.buttons || [];
+    if (buttons.length > 0) {
+        buttons.forEach(b => {
+            const btn = document.createElement('button');
+            btn.className = 'modal-btn ' + (b.cls || 'modal-btn-primary');
+            btn.textContent = b.text;
+            btn.onclick = () => {
+                overlay.style.display = 'none';
+                if (b.action) b.action(inputEl.value.trim());
+            };
+            buttonsEl.appendChild(btn);
+        });
+    } else {
+        if (opts.onConfirm) {
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'modal-btn modal-btn-primary';
+            confirmBtn.textContent = opts.confirmText || 'تأكيد';
+            confirmBtn.onclick = () => {
+                overlay.style.display = 'none';
+                opts.onConfirm(inputEl.value.trim());
+            };
+            buttonsEl.appendChild(confirmBtn);
+        }
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'modal-btn modal-btn-cancel';
+        cancelBtn.textContent = opts.cancelText || 'إلغاء';
+        cancelBtn.onclick = () => {
+            overlay.style.display = 'none';
+            if (opts.onCancel) opts.onCancel();
+        };
+        buttonsEl.appendChild(cancelBtn);
+    }
+
+    overlay.style.display = 'flex';
+
+    if (opts.input) {
+        setTimeout(() => inputEl.focus(), 100);
+    }
 }
 
 // ---- تشغيل ----
@@ -281,7 +348,6 @@ function enterPeopleScreen() {
         if (currentChatUser && currentChatUser.id === msg.from) {
             addMsg(msg.text, false);
             saveToHistory(msg.from, msg.text, false);
-            playNotif();
             if (navigator.vibrate) navigator.vibrate(50);
         } else {
             unreadFrom.add(msg.from);
@@ -294,38 +360,71 @@ function enterPeopleScreen() {
     });
 
     document.getElementById('backToLanding').onclick = () => {
-        var choice = prompt('1 = تغيير الاسم فقط (تبقى محادثاتك)\n2 = خروج كامل (هوية جديدة)\n\nاختر:');
-        if (choice === '1') {
-            // تغيير الاسم فقط — نفس الهوية
-            var newName = prompt('اكتب اسمك الجديد:', myName);
-            if (newName && newName.trim().length > 0 && newName.trim().length <= 20) {
-                myName = newName.trim();
-                localStorage.setItem('jiranak_name', myName);
-                document.getElementById('myName').textContent = myName;
-                myPresenceRef.update({ name: myName });
-            }
-        } else if (choice === '2') {
-            // خروج كامل — هوية جديدة
-            var deletePromise = myPresenceRef ? myPresenceRef.remove() : Promise.resolve();
-            cleanup();
-            localStorage.removeItem('jiranak_name');
-            chatHistory.clear();
-            myOldIds.add(myId);
-            localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
-            myId = generateId();
-            localStorage.setItem('jiranak_id', myId);
-            deletePromise.then(function() { initLanding(); }).catch(function() { initLanding(); });
-        }
+        showModal({
+            title: 'خيارات الخروج',
+            message: 'اختر ما تريد فعله:',
+            buttons: [
+                {
+                    text: '✏️ تغيير الاسم فقط',
+                    cls: 'modal-btn-primary',
+                    action: () => {
+                        showModal({
+                            title: 'تغيير الاسم',
+                            message: 'اكتب اسمك الجديد:',
+                            input: true,
+                            inputValue: myName,
+                            confirmText: 'تغيير',
+                            onConfirm: (val) => {
+                                if (val.length > 0 && val.length <= 20) {
+                                    myName = val;
+                                    localStorage.setItem('jiranak_name', myName);
+                                    document.getElementById('myName').textContent = myName;
+                                    myPresenceRef.update({ name: myName });
+                                }
+                            }
+                        });
+                    }
+                },
+                {
+                    text: '🚪 خروج كامل (هوية جديدة)',
+                    cls: 'modal-btn-danger',
+                    action: () => {
+                        var deletePromise = myPresenceRef ? myPresenceRef.remove() : Promise.resolve();
+                        cleanup();
+                        localStorage.removeItem('jiranak_name');
+                        chatHistory.clear();
+                        myOldIds.add(myId);
+                        localStorage.setItem('jiranak_old_ids', JSON.stringify([...myOldIds]));
+                        myId = generateId();
+                        localStorage.setItem('jiranak_id', myId);
+                        deletePromise.then(function() { initLanding(); }).catch(function() { initLanding(); });
+                    }
+                },
+                {
+                    text: 'إلغاء',
+                    cls: 'modal-btn-cancel',
+                    action: () => {}
+                }
+            ]
+        });
     };
 
     document.getElementById('editNameBtn').onclick = () => {
-        var newName = prompt('اكتب اسمك الجديد:', myName);
-        if (newName && newName.trim().length > 0 && newName.trim().length <= 20) {
-            myName = newName.trim();
-            localStorage.setItem('jiranak_name', myName);
-            document.getElementById('myName').textContent = myName;
-            myPresenceRef.update({ name: myName });
-        }
+        showModal({
+            title: 'تعديل الاسم',
+            message: 'اكتب اسمك الجديد:',
+            input: true,
+            inputValue: myName,
+            confirmText: 'تغيير',
+            onConfirm: (val) => {
+                if (val.length > 0 && val.length <= 20) {
+                    myName = val;
+                    localStorage.setItem('jiranak_name', myName);
+                    document.getElementById('myName').textContent = myName;
+                    myPresenceRef.update({ name: myName });
+                }
+            }
+        });
     };
 
     // زر إلغاء الحظر
@@ -337,12 +436,17 @@ function enterPeopleScreen() {
         unblockBtn.style.display = 'none';
     }
     unblockBtn.onclick = () => {
-        if (confirm('إلغاء حظر ' + blockedUsers.size + ' شخص؟')) {
-            blockedUsers.clear();
-            localStorage.setItem('jiranak_blocked', '[]');
-            unblockBtn.style.display = 'none';
-            presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
-        }
+        showModal({
+            title: 'إلغاء الحظر',
+            message: 'إلغاء حظر ' + blockedUsers.size + ' شخص؟',
+            confirmText: 'إلغاء الحظر',
+            onConfirm: () => {
+                blockedUsers.clear();
+                localStorage.setItem('jiranak_blocked', '[]');
+                unblockBtn.style.display = 'none';
+                presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
+            }
+        });
     };
 
     document.getElementById('shareBtn')?.addEventListener('click', shareLink);
@@ -468,14 +572,19 @@ function startChat(userId, userName, uLat, uLng) {
 
     // زر الحظر
     document.getElementById('blockBtn').onclick = () => {
-        if (confirm(`حظر ${userName}؟ لن تظهر رسائله بعد الآن.`)) {
-            blockedUsers.add(userId);
-            localStorage.setItem('jiranak_blocked', JSON.stringify([...blockedUsers]));
-            if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
-            currentChatUser = null;
-            currentScreen = 'people';
-            showScreen('peopleScreen');
-        }
+        showModal({
+            title: 'حظر المستخدم',
+            message: 'حظر ' + userName + '؟ لن تظهر رسائله بعد الآن.',
+            confirmText: 'حظر',
+            onConfirm: () => {
+                blockedUsers.add(userId);
+                localStorage.setItem('jiranak_blocked', JSON.stringify([...blockedUsers]));
+                if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
+                currentChatUser = null;
+                currentScreen = 'people';
+                showScreen('peopleScreen');
+            }
+        });
     };
 
     // مؤشر "يكتب..."
@@ -513,7 +622,6 @@ function startChat(userId, userName, uLat, uLng) {
     };
 
     const sendBtn = document.getElementById('sendBtn');
-    let msgCounter = 0;
 
     const sendMsg = () => {
         const el = document.getElementById('msgInput');
@@ -523,8 +631,7 @@ function startChat(userId, userName, uLat, uLng) {
         if (now - lastMsgTime < 500) return;
         lastMsgTime = now;
 
-        // [FIX 5] كل رسالة تاخذ ID فريد لعلامة ✓
-        const thisMsgId = 'msg-' + (++msgCounter);
+        const thisMsgId = 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
         addMsg(text, true, false, thisMsgId);
         saveToHistory(userId, text, true);
         el.value = '';
@@ -609,6 +716,7 @@ function showScreen(id) {
 }
 
 function getDistance(lat2, lng2) {
+    if (lat2 == null || lng2 == null || isNaN(lat2) || isNaN(lng2)) return Infinity;
     const R = 6371;
     const dLat = (lat2 - myLat) * Math.PI / 180;
     const dLng = (lng2 - myLng) * Math.PI / 180;
@@ -627,7 +735,13 @@ function shareLink() {
     if (navigator.share) {
         navigator.share({ title: 'دردش مع جيرانك', text: 'دردش مع الناس اللي حولك - مجهول ومؤقت!', url });
     } else {
-        navigator.clipboard.writeText(url).then(() => alert('تم نسخ الرابط!'));
+        navigator.clipboard.writeText(url).then(() => {
+            showModal({
+                title: 'تم النسخ',
+                message: 'تم نسخ الرابط! شاركه مع جيرانك.',
+                buttons: [{ text: 'حسناً', cls: 'modal-btn-primary', action: () => {} }]
+            });
+        });
     }
 }
 
