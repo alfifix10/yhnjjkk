@@ -17,27 +17,29 @@
     <!-- Screen 1: Landing -->
     <div id="landingScreen" class="screen active">
         <div class="screen-content">
-            <div class="logo-big">🏘️</div>
-            <h1 class="title">دردش مع جيرانك</h1>
-            <p class="subtitle">اكتشف مين حولك - مجهول ومؤقت</p>
-            <div class="features-mini">
-                <span>🔒 مجهول تماماً</span>
-                <span>💨 ينحذف كل شي بعد خروجك</span>
-                <span>📍 ناس قريبين منك فعلاً</span>
+            <div class="frame">
+                <div class="logo-big">🏘️</div>
+                <h1 class="title">دردش مع جيرانك</h1>
+                <p class="subtitle">اكتشف مين حولك - مجهول ومؤقت</p>
+                <div class="features-mini">
+                    <span>🔒 مجهول تماماً</span>
+                    <span>💨 ينحذف كل شي بعد خروجك</span>
+                    <span>📍 ناس قريبين منك فعلاً</span>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="nicknameInput" placeholder="اكتب اسم مستعار..." maxlength="20" autocomplete="off">
+                    <button id="joinBtn" class="btn-primary">ادخل</button>
+                </div>
+                <div class="random-names">
+                    <span>أو اختر:</span>
+                    <button class="name-chip" data-name="الجار الفضولي">الجار الفضولي</button>
+                    <button class="name-chip" data-name="أبو القطط">أبو القطط</button>
+                    <button class="name-chip" data-name="بنت الحارة">بنت الحارة</button>
+                    <button class="name-chip" data-name="الجار الطيب">الجار الطيب</button>
+                    <button class="name-chip" data-name="مجهول">مجهول</button>
+                </div>
+                <p class="note">📍 سنطلب إذن الموقع لنعرض لك جيرانك فقط</p>
             </div>
-            <div class="input-group">
-                <input type="text" id="nicknameInput" placeholder="اكتب اسم مستعار..." maxlength="20" autocomplete="off">
-                <button id="joinBtn" class="btn-primary">ادخل</button>
-            </div>
-            <div class="random-names">
-                <span>أو اختر:</span>
-                <button class="name-chip" data-name="الجار الفضولي">الجار الفضولي</button>
-                <button class="name-chip" data-name="أبو القطط">أبو القطط</button>
-                <button class="name-chip" data-name="بنت الحارة">بنت الحارة</button>
-                <button class="name-chip" data-name="الجار الطيب">الجار الطيب</button>
-                <button class="name-chip" data-name="مجهول">مجهول</button>
-            </div>
-            <p class="note">📍 سنطلب إذن الموقع لنعرض لك جيرانك فقط</p>
         </div>
     </div>
 
@@ -52,16 +54,18 @@
             <div class="pulse-dot"></div>
         </div>
         <div class="screen-content people-content">
-            <h2>الجيران المتصلين الآن</h2>
-            <p class="hint">اختر شخص وابدأ الدردشة</p>
-            <div id="peopleList" class="people-list">
-                <!-- يتم إضافتها ديناميكياً -->
-            </div>
-            <div id="noPeople" class="no-people" style="display:none">
-                <div class="empty-icon">👀</div>
-                <p>ما فيه أحد قريب منك الآن</p>
-                <p class="hint">شارك الرابط مع جيرانك!</p>
-                <button id="shareBtn" class="btn-secondary">📤 شارك الرابط</button>
+            <div class="people-frame">
+                <h2>الجيران المتصلين الآن</h2>
+                <p class="hint">اختر شخص وابدأ الدردشة</p>
+                <div id="peopleList" class="people-list">
+                    <!-- يتم إضافتها ديناميكياً -->
+                </div>
+                <div id="noPeople" class="no-people" style="display:none">
+                    <div class="empty-icon">👀</div>
+                    <p>ما فيه أحد قريب منك الآن</p>
+                    <p class="hint">شارك الرابط مع جيرانك!</p>
+                    <button id="shareBtn" class="btn-secondary">📤 شارك الرابط</button>
+                </div>
             </div>
         </div>
     </div>
@@ -76,12 +80,14 @@
             </div>
             <div class="ephemeral-badge">💨 مؤقت</div>
         </div>
-        <div id="chatMessages" class="chat-messages">
-            <!-- الرسائل -->
-        </div>
-        <div class="chat-input-bar">
-            <input type="text" id="msgInput" placeholder="اكتب رسالة..." autocomplete="off">
-            <button id="sendBtn" class="btn-send">ارسل</button>
+        <div class="chat-frame">
+            <div id="chatMessages" class="chat-messages">
+                <!-- الرسائل -->
+            </div>
+            <div class="chat-input-bar">
+                <input type="text" id="msgInput" placeholder="اكتب رسالة..." autocomplete="off">
+                <button id="sendBtn" class="btn-send">ارسل</button>
+            </div>
         </div>
     </div>
 

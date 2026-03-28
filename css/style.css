@@ -77,6 +77,78 @@ body {
     overflow-y: auto;
 }
 
+/* إطار احترافي يجمع كل المحتوى */
+.screen-content > .frame {
+    width: 100%;
+    max-width: 480px;
+    background: var(--dark-2);
+    border: 1px solid var(--glass-border);
+    border-radius: 28px;
+    padding: 40px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.03);
+    position: relative;
+    overflow: hidden;
+}
+.screen-content > .frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(108,92,231,0.4), rgba(0,206,201,0.4), transparent);
+}
+
+/* إطار صفحة الأشخاص */
+.people-frame {
+    width: 100%;
+    max-width: 480px;
+    background: var(--dark-2);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.5);
+    flex: 1;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+/* إطار الشات */
+.chat-frame {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+@media (min-width: 481px) {
+    .screen {
+        background: var(--dark);
+        align-items: center;
+        justify-content: center;
+    }
+    #chatScreen {
+        padding: 20px;
+    }
+    .chat-frame {
+        background: var(--dark-2);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        overflow: hidden;
+        height: calc(100vh - 40px);
+        max-height: 800px;
+        box-shadow: 0 16px 60px rgba(0, 0, 0, 0.5);
+    }
+}
+
 /* ========== LANDING SCREEN ========== */
 .logo-big {
     font-size: 80px;
