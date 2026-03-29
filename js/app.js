@@ -553,8 +553,16 @@ function renderPeopleFromData(data) {
     // ترتيب بالمسافة — الأقرب أولاً
     allUsers.sort(function(a, b) { return a._dist - b._dist; });
 
-    // النظام الذكي: نحدد النطاق تلقائياً
-    var RADIUS_LEVELS = [2, 5, 10, 25, 50, 100]; // كم — الحد الأقصى 100 كم
+    // النظام الذكي: النطاق يتقلص تلقائياً كل ما كثر المستخدمين
+    var totalOnline = allUsers.length;
+    var maxRadius;
+    if (totalOnline < 10) maxRadius = 500;
+    else if (totalOnline < 50) maxRadius = 100;
+    else if (totalOnline < 200) maxRadius = 50;
+    else if (totalOnline < 1000) maxRadius = 20;
+    else maxRadius = 10;
+
+    var RADIUS_LEVELS = [2, 5, 10, 25, 50, 100, 200, 500].filter(function(r) { return r <= maxRadius; });
     var users = [];
     var activeRadius = 0;
 
