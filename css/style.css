@@ -142,6 +142,7 @@ body {
         margin: 8px;
     }
     .logo-text { font-size: 36px; }
+    .logo-en { font-size: 13px; letter-spacing: 5px; }
     .title { font-size: 22px; margin-bottom: 2px; }
     .subtitle { font-size: 13px; margin-bottom: 10px; }
     .features-mini { margin-bottom: 10px; gap: 6px; }
@@ -158,7 +159,17 @@ body {
 .logo-text {
     font-size: 48px;
     font-weight: 900;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
+    text-align: center;
+    line-height: 1;
+}
+.logo-en {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    color: var(--accent);
+    margin-top: 2px;
 }
 
 .title {
