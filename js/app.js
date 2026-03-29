@@ -143,6 +143,15 @@ function formatDistance(lat, lng) {
 
 var myGpsReady = false; // يصبح true فقط لما الدقة < 100 متر
 
+var BAD_WORDS = ['كلب','حمار','غبي','أحمق','كس','زب','شرموط','عرص','نيك','طيز','خول','منيوك','لعن','حقير','وسخ','قحب','ديوث'];
+function containsBadWords(text) {
+    var lower = text.toLowerCase();
+    for (var i = 0; i < BAD_WORDS.length; i++) {
+        if (lower.indexOf(BAD_WORDS[i]) !== -1) return true;
+    }
+    return false;
+}
+
 function getAvatar(id) { return AVATARS[hashCode(id) % AVATARS.length]; }
 function getGradient(id) { return GRADIENTS[hashCode(id) % GRADIENTS.length]; }
 function hashCode(str) {
@@ -305,6 +314,11 @@ function initLanding() {
         if (name.length < 1) {
             input.style.borderColor = '#fd79a8';
             input.focus();
+            setTimeout(() => input.style.borderColor = '', 1500);
+            return;
+        }
+        if (containsBadWords(name)) {
+            input.style.borderColor = '#e17055';
             setTimeout(() => input.style.borderColor = '', 1500);
             return;
         }
@@ -738,6 +752,10 @@ function startChat(userId, userName, uLat, uLng) {
         var el = document.getElementById('msgInput');
         var text = el.value.trim();
         if (!text || text.length > 500) return;
+        if (containsBadWords(text)) {
+            addSystemMsg('⚠️ الرسالة تحتوي على ألفاظ غير لائقة');
+            return;
+        }
         var now = Date.now();
         // حد 500ms بين كل رسالة
         if (now - lastMsgTime < 500) {
