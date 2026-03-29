@@ -554,7 +554,7 @@ function renderPeopleFromData(data) {
     allUsers.sort(function(a, b) { return a._dist - b._dist; });
 
     // النظام الذكي: نحدد النطاق تلقائياً
-    var RADIUS_LEVELS = [2, 5, 10, 25, 50]; // كم — الحد الأقصى 50 كم
+    var RADIUS_LEVELS = [2, 5, 10, 25, 50, 100]; // كم — الحد الأقصى 100 كم
     var users = [];
     var activeRadius = 0;
 
