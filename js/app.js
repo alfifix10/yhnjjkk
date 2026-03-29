@@ -406,8 +406,18 @@ function enterPeopleScreen() {
     document.getElementById('onlineCount').textContent = 'جاري الاتصال...';
     history.pushState({ screen: 'people' }, '', '');
 
-    // دائماً نحدّث الموقع بالخلفية لتحسين الدقة
+    // تحديث الموقع بالخلفية
     startGeoWatch();
+
+    // لو GPS ما جهز بعد 20 ثانية → نعرض الكل كـ fallback
+    setTimeout(function() {
+        if (!myGpsReady && currentScreen === 'people') {
+            myGpsReady = true; // نقبل أي موقع متاح
+            if (presenceRef) {
+                presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
+            }
+        }
+    }, 20000);
 
     presenceRef = db.ref('online');
     myPresenceRef = presenceRef.child(myId);
@@ -568,8 +578,11 @@ function renderPeopleFromData(data) {
 
     var users;
     if (!myGpsReady) {
-        // GPS لم يجهز → أعرض الكل (مؤقتاً)
-        users = allUsers.slice(0, 30);
+        // GPS لم يجهز → ننتظر بدل ما نعرض ناس من مدن بعيدة
+        count.textContent = '⏳ جاري تحديد موقعك...';
+        list.style.display = 'none';
+        noPeople.style.display = 'none';
+        return;
     } else {
         // فلتر: أبعد شخص معروض لازم يكون ضمن 100 كم
         var nearby = allUsers.filter(function(u) { return u._dist <= 100; });
