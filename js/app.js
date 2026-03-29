@@ -559,51 +559,36 @@ function renderPeopleFromData(data) {
     // ترتيب بالمسافة — الأقرب أولاً
     allUsers.sort(function(a, b) { return a._dist - b._dist; });
 
-    // النظام الذكي: النطاق يتقلص تلقائياً كل ما كثر المستخدمين
-    var totalOnline = allUsers.length;
-    var maxRadius;
-    if (totalOnline < 10) maxRadius = 500;
-    else if (totalOnline < 50) maxRadius = 100;
-    else if (totalOnline < 200) maxRadius = 50;
-    else if (totalOnline < 1000) maxRadius = 20;
-    else maxRadius = 10;
+    // النظام الذكي التدريجي:
+    // بدل نطاق ثابت، نعرض أقرب N شخص
+    // كل ما كثر المستخدمين، قلّ العدد المعروض تدريجياً
+    // الأبعد يختفي واحد واحد — مو مجموعة فجأة
+    var total = allUsers.length;
+    var maxShow;
+    if (total <= 5) maxShow = total;        // قليلين → أعرض الكل
+    else if (total <= 20) maxShow = 15;
+    else if (total <= 50) maxShow = 12;
+    else if (total <= 100) maxShow = 10;
+    else maxShow = 8;
 
-    var RADIUS_LEVELS = [2, 5, 10, 25, 50, 100, 200, 500].filter(function(r) { return r <= maxRadius; });
-    var users = [];
-    var activeRadius = 0;
-
+    var users;
     if (!myGpsReady) {
-        // GPS لم يجهز بعد → أعرض الكل
-        users = allUsers;
-        activeRadius = 0;
+        // GPS لم يجهز → أعرض الكل (مؤقتاً)
+        users = allUsers.slice(0, 30);
     } else {
-        // جرّب كل نطاق حتى نلقى 1+ شخص على الأقل
-        for (var r = 0; r < RADIUS_LEVELS.length; r++) {
-            var radius = RADIUS_LEVELS[r];
-            var nearby = allUsers.filter(function(u) { return u._dist <= radius; });
-            if (nearby.length > 0) {
-                users = nearby;
-                activeRadius = radius;
-                break;
-            }
-        }
-        // لو ما لقينا أحد ضمن 50 كم = ما فيه جيران
-        // لا نعرض أحد من مدن بعيدة
+        // فلتر: أبعد شخص معروض لازم يكون ضمن 100 كم
+        var nearby = allUsers.filter(function(u) { return u._dist <= 100; });
+        users = nearby.slice(0, maxShow);
     }
 
-    // عرض عدد المتصلين + النطاق
     if (users.length === 0) {
-        count.textContent = 'لا يوجد أحد';
+        count.textContent = 'لا يوجد أحد قريب';
         list.style.display = 'none';
         noPeople.style.display = 'block';
         return;
     }
 
-    var radiusText = '';
-    if (activeRadius > 0 && activeRadius < 99999) {
-        radiusText = activeRadius < 1 ? ' (ضمن ' + (activeRadius * 1000) + ' متر)' : ' (ضمن ' + activeRadius + ' كم)';
-    }
-    count.textContent = users.length + ' جار' + radiusText;
+    count.textContent = users.length + ' جار قريب';
 
     list.style.display = 'flex';
     noPeople.style.display = 'none';
