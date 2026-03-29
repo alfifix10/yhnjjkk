@@ -141,8 +141,7 @@ body {
         padding: 20px 16px 16px;
         margin: 8px;
     }
-    .logo-big { font-size: 40px; margin-bottom: 2px; }
-    .title { font-size: 28px; margin-bottom: 2px; }
+    .logo-text { font-size: 38px; margin-bottom: 2px; }
     .subtitle { font-size: 13px; margin-bottom: 10px; }
     .features-mini { margin-bottom: 10px; gap: 6px; }
     .features-mini span { font-size: 11px; padding: 5px 10px; }
@@ -155,25 +154,15 @@ body {
 }
 
 /* ========== LANDING SCREEN ========== */
-.logo-big {
-    font-size: 56px;
-    margin-bottom: 4px;
-    animation: bounce 2s ease infinite;
-}
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-
-.title {
-    font-size: 36px;
+.logo-text {
+    font-size: 52px;
     font-weight: 900;
     background: var(--gradient-1);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: 4px;
-    letter-spacing: -1px;
+    letter-spacing: 2px;
 }
 
 .subtitle {
