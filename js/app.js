@@ -554,7 +554,7 @@ function renderPeopleFromData(data) {
     allUsers.sort(function(a, b) { return a._dist - b._dist; });
 
     // النظام الذكي: نحدد النطاق تلقائياً
-    var RADIUS_LEVELS = [2, 5, 10, 25, 50, 100, 500, 99999]; // كم
+    var RADIUS_LEVELS = [2, 5, 10, 25, 50]; // كم — الحد الأقصى 50 كم
     var users = [];
     var activeRadius = 0;
 
@@ -573,11 +573,8 @@ function renderPeopleFromData(data) {
                 break;
             }
         }
-        // لو ما لقينا أحد في كل النطاقات
-        if (users.length === 0) {
-            users = allUsers;
-            activeRadius = 0;
-        }
+        // لو ما لقينا أحد ضمن 50 كم = ما فيه جيران
+        // لا نعرض أحد من مدن بعيدة
     }
 
     // عرض عدد المتصلين + النطاق
