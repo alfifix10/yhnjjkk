@@ -75,7 +75,6 @@ function getOrCreateId() {
 
 var myId = getOrCreateId();
 var myName = '';
-var myCity = '';
 var myLat = 0;
 var myLng = 0;
 var currentChatUser = null;
@@ -130,9 +129,19 @@ const GRADIENTS = [
     'linear-gradient(135deg, #a29bfe, #fd79a8)',
 ];
 
-function formatDistance() {
-    return '🟢 متصل الآن';
+function formatDistance(lat, lng) {
+    if (!myGpsReady || myLat === 0 || !lat || !lng) return '⏳ جاري تحديد الموقع';
+    var dist = getDistance(lat, lng);
+    if (isNaN(dist) || dist === Infinity) return '⏳ جاري تحديد الموقع';
+    var meters = Math.round(dist * 1000);
+    if (meters < 10) return '🟢 بجانبك تقريباً';
+    if (meters < 100) return '🟢 ' + meters + ' متر';
+    if (meters < 1000) return '🟡 ' + meters + ' متر';
+    if (dist < 10) return '🟠 ' + dist.toFixed(1) + ' كم';
+    return '⚪ ' + Math.round(dist) + ' كم';
 }
+
+var myGpsReady = false; // يصبح true فقط لما الدقة < 100 متر
 
 function getAvatar(id) { return AVATARS[hashCode(id) % AVATARS.length]; }
 function getGradient(id) { return GRADIENTS[hashCode(id) % GRADIENTS.length]; }
@@ -256,10 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
         db = firebase.database();
 
         var savedName = localStorage.getItem('jiranak_name');
-        var savedCity = localStorage.getItem('jiranak_city');
-        if (savedName && savedCity) {
+        if (savedName) {
             myName = savedName;
-            myCity = savedCity;
             enterPeopleScreen();
         } else {
             initLanding();
@@ -293,29 +300,17 @@ function initLanding() {
     joinBtn.textContent = 'ادخل';
     setTimeout(function() { input.focus(); }, 300);
 
-    var citySelect = document.getElementById('citySelect');
-    var savedCity = localStorage.getItem('jiranak_city');
-    if (savedCity) citySelect.value = savedCity;
-
     joinBtn.onclick = () => {
         var name = input.value.trim();
-        var city = citySelect.value;
         if (name.length < 1) {
             input.style.borderColor = '#fd79a8';
             input.focus();
             setTimeout(() => input.style.borderColor = '', 1500);
             return;
         }
-        if (!city) {
-            citySelect.style.borderColor = '#fd79a8';
-            setTimeout(() => citySelect.style.borderColor = '', 1500);
-            return;
-        }
         myName = name;
-        myCity = city;
         localStorage.setItem('jiranak_name', name);
-        localStorage.setItem('jiranak_city', city);
-        enterPeopleScreen();
+        requestLocation();
     };
 
     input.onkeypress = (e) => { if (e.key === 'Enter') joinBtn.click(); };
@@ -343,9 +338,12 @@ function requestLocation() {
     // محاولة واحدة سريعة أولاً
     navigator.geolocation.getCurrentPosition(
         function(pos) {
+            var accuracy = pos.coords.accuracy || 99999;
+            myGpsAccuracy = accuracy;
+            // نقبل الموقع الأولي حتى لو غير دقيق — watchPosition سيحسّنه
             myLat = pos.coords.latitude;
             myLng = pos.coords.longitude;
-            myGpsAccuracy = pos.coords.accuracy || 0;
+            if (accuracy < 200) myGpsReady = true;
             enteredFromGeo = true;
             enterPeopleScreen();
             startGeoWatch();
@@ -361,19 +359,34 @@ function requestLocation() {
 
 function startGeoWatch() {
     if (geoWatchId !== null) return;
+    if (!navigator.geolocation) return;
     geoWatchId = navigator.geolocation.watchPosition(
         function(pos) {
             var newLat = pos.coords.latitude;
             var newLng = pos.coords.longitude;
-            myGpsAccuracy = pos.coords.accuracy || 0;
+            var accuracy = pos.coords.accuracy || 99999;
+            myGpsAccuracy = accuracy;
+
+            // نقبل الموقع فقط لو الدقة أقل من 200 متر (GPS حقيقي)
+            if (accuracy > 200) return;
+
+            // كشف قفزة مريبة
             if (myLat !== 0 && myLng !== 0) {
                 var jump = getDistance(newLat, newLng);
                 if (jump > 50) return;
             }
+
             myLat = newLat;
             myLng = newLng;
+            myGpsReady = true;
+
+            // حدّث Firebase + أعد عرض القائمة
             if (myPresenceRef) {
-                myPresenceRef.update({ lat: roundCoord(myLat), lng: roundCoord(myLng) });
+                myPresenceRef.update({ lat: myLat, lng: myLng, acc: Math.round(accuracy) });
+            }
+            // تحديث المسافات في القائمة
+            if (presenceRef && currentScreen === 'people') {
+                presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
             }
         },
         function() {},
@@ -387,7 +400,7 @@ function enterPeopleScreen() {
 
     currentScreen = 'people';
     showScreen('peopleScreen');
-    document.getElementById('myName').textContent = myName + ' · ' + myCity;
+    document.getElementById('myName').textContent = myName;
     document.getElementById('onlineCount').textContent = 'جاري الاتصال...';
     history.pushState({ screen: 'people' }, '', '');
 
@@ -415,7 +428,8 @@ function enterPeopleScreen() {
         }
     });
 
-    var presenceData = { name: myName, city: myCity, t: firebase.database.ServerValue.TIMESTAMP };
+    var presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
+    if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
     myPresenceRef.set(presenceData);
     myPresenceRef.onDisconnect().remove();
 
@@ -523,7 +537,7 @@ function renderPeopleFromData(data) {
 
     const users = [];
     Object.entries(data).forEach(([id, u]) => {
-        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name && u.city === myCity) {
+        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
             users.push({ id, ...u });
         }
     });
@@ -577,7 +591,7 @@ function startChat(userId, userName, uLat, uLng) {
     history.pushState({ screen: 'chat' }, '', '');
 
     document.getElementById('chatWith').textContent = userName;
-    document.getElementById('chatDistance').textContent = '🟢 متصل الآن';
+    document.getElementById('chatDistance').textContent = formatDistance(uLat, uLng);
 
     var msgsDiv = document.getElementById('chatMessages');
     msgsDiv.innerHTML = '';
@@ -611,7 +625,7 @@ function startChat(userId, userName, uLat, uLng) {
                 currentChatUser.name = data.name;
                 addSystemMsg('غيّر اسمه إلى: ' + data.name);
             }
-            statusEl.textContent = '🟢 متصل الآن';
+            statusEl.textContent = formatDistance(data.lat, data.lng);
             statusEl.style.color = '';
             partnerWasOnline = true;
         } else if (partnerWasOnline) {
