@@ -165,12 +165,13 @@ body {
 }
 .logo-en {
     display: block;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 8px;
+    letter-spacing: 7px;
     color: var(--accent);
-    margin-top: 8px;
-    text-indent: 8px;
+    margin-top: 14px;
+    text-indent: 7px;
+    direction: ltr;
 }
 
 .title {
