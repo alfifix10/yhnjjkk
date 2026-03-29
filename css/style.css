@@ -164,13 +164,10 @@ body {
     line-height: 1;
     letter-spacing: 4px;
     direction: ltr;
-    background: var(--gradient-1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #fff;
 }
 .logo-dot {
-    -webkit-text-fill-color: #fff;
+    color: var(--accent);
     font-weight: 600;
     letter-spacing: 0;
 }
