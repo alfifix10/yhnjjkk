@@ -75,6 +75,7 @@ function getOrCreateId() {
 
 var myId = getOrCreateId();
 var myName = '';
+var myCity = '';
 var myLat = 0;
 var myLng = 0;
 var currentChatUser = null;
@@ -255,8 +256,10 @@ document.addEventListener('DOMContentLoaded', () => {
         db = firebase.database();
 
         var savedName = localStorage.getItem('jiranak_name');
-        if (savedName) {
+        var savedCity = localStorage.getItem('jiranak_city');
+        if (savedName && savedCity) {
             myName = savedName;
+            myCity = savedCity;
             enterPeopleScreen();
         } else {
             initLanding();
@@ -290,19 +293,29 @@ function initLanding() {
     joinBtn.textContent = 'ادخل';
     setTimeout(function() { input.focus(); }, 300);
 
+    var citySelect = document.getElementById('citySelect');
+    var savedCity = localStorage.getItem('jiranak_city');
+    if (savedCity) citySelect.value = savedCity;
+
     joinBtn.onclick = () => {
-        const errDiv = document.getElementById('locationError');
-        if (errDiv) errDiv.style.display = 'none';
-        const name = input.value.trim();
+        var name = input.value.trim();
+        var city = citySelect.value;
         if (name.length < 1) {
             input.style.borderColor = '#fd79a8';
             input.focus();
             setTimeout(() => input.style.borderColor = '', 1500);
             return;
         }
+        if (!city) {
+            citySelect.style.borderColor = '#fd79a8';
+            setTimeout(() => citySelect.style.borderColor = '', 1500);
+            return;
+        }
         myName = name;
+        myCity = city;
         localStorage.setItem('jiranak_name', name);
-        requestLocation();
+        localStorage.setItem('jiranak_city', city);
+        enterPeopleScreen();
     };
 
     input.onkeypress = (e) => { if (e.key === 'Enter') joinBtn.click(); };
@@ -374,7 +387,7 @@ function enterPeopleScreen() {
 
     currentScreen = 'people';
     showScreen('peopleScreen');
-    document.getElementById('myName').textContent = myName;
+    document.getElementById('myName').textContent = myName + ' · ' + myCity;
     document.getElementById('onlineCount').textContent = 'جاري الاتصال...';
     history.pushState({ screen: 'people' }, '', '');
 
@@ -402,11 +415,7 @@ function enterPeopleScreen() {
         }
     });
 
-    const presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
-    if (myLat !== 0 && myLng !== 0) {
-        presenceData.lat = roundCoord(myLat);
-        presenceData.lng = roundCoord(myLng);
-    }
+    var presenceData = { name: myName, city: myCity, t: firebase.database.ServerValue.TIMESTAMP };
     myPresenceRef.set(presenceData);
     myPresenceRef.onDisconnect().remove();
 
@@ -514,7 +523,7 @@ function renderPeopleFromData(data) {
 
     const users = [];
     Object.entries(data).forEach(([id, u]) => {
-        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
+        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name && u.city === myCity) {
             users.push({ id, ...u });
         }
     });

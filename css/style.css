@@ -200,6 +200,25 @@ body {
     white-space: nowrap;
 }
 
+.city-select {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 16px;
+    border: 2px solid var(--glass-border);
+    background: var(--dark-2);
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.city-select:focus { border-color: var(--primary); }
+.city-select option { background: var(--dark-2); color: var(--text); }
+
 .input-group {
     display: flex;
     flex-direction: column;
