@@ -531,30 +531,71 @@ function enterPeopleScreen() {
 }
 
 function renderPeopleFromData(data) {
-    const list = document.getElementById('peopleList');
-    const noPeople = document.getElementById('noPeople');
-    const count = document.getElementById('onlineCount');
+    var list = document.getElementById('peopleList');
+    var noPeople = document.getElementById('noPeople');
+    var count = document.getElementById('onlineCount');
 
-    const users = [];
-    Object.entries(data).forEach(([id, u]) => {
+    var allUsers = [];
+    Object.entries(data).forEach(function(entry) {
+        var id = entry[0], u = entry[1];
         if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
-            users.push({ id, ...u });
+            u.id = id;
+            // حساب المسافة لكل مستخدم
+            if (myGpsReady && u.lat && u.lng) {
+                u._dist = getDistance(u.lat, u.lng);
+            } else {
+                u._dist = 99999; // بدون GPS → يروح آخر القائمة
+            }
+            allUsers.push(u);
         }
     });
 
-    count.textContent = `${users.length} جار متصل`;
+    // ترتيب بالمسافة — الأقرب أولاً
+    allUsers.sort(function(a, b) { return a._dist - b._dist; });
 
+    // النظام الذكي: نحدد النطاق تلقائياً
+    var RADIUS_LEVELS = [2, 5, 10, 25, 50, 100, 500, 99999]; // كم
+    var users = [];
+    var activeRadius = 0;
+
+    if (!myGpsReady) {
+        // GPS لم يجهز بعد → أعرض الكل
+        users = allUsers;
+        activeRadius = 0;
+    } else {
+        // جرّب كل نطاق حتى نلقى 1+ شخص على الأقل
+        for (var r = 0; r < RADIUS_LEVELS.length; r++) {
+            var radius = RADIUS_LEVELS[r];
+            var nearby = allUsers.filter(function(u) { return u._dist <= radius; });
+            if (nearby.length > 0) {
+                users = nearby;
+                activeRadius = radius;
+                break;
+            }
+        }
+        // لو ما لقينا أحد في كل النطاقات
+        if (users.length === 0) {
+            users = allUsers;
+            activeRadius = 0;
+        }
+    }
+
+    // عرض عدد المتصلين + النطاق
     if (users.length === 0) {
+        count.textContent = 'لا يوجد أحد';
         list.style.display = 'none';
         noPeople.style.display = 'block';
         return;
     }
+
+    var radiusText = '';
+    if (activeRadius > 0 && activeRadius < 99999) {
+        radiusText = activeRadius < 1 ? ' (ضمن ' + (activeRadius * 1000) + ' متر)' : ' (ضمن ' + activeRadius + ' كم)';
+    }
+    count.textContent = users.length + ' جار' + radiusText;
+
     list.style.display = 'flex';
     noPeople.style.display = 'none';
-
-    if (myLat !== 0 && myLng !== 0) {
-        users.sort((a, b) => getDistance(a.lat, a.lng) - getDistance(b.lat, b.lng));
-    }
 
     list.innerHTML = users.map((u, i) => {
         var distText = formatDistance(u.lat, u.lng);
