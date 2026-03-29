@@ -162,6 +162,12 @@ body {
     margin-bottom: 24px;
     text-align: center;
     line-height: 1;
+    letter-spacing: 4px;
+    direction: ltr;
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 .logo-en {
     display: block;
