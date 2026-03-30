@@ -266,7 +266,19 @@ document.addEventListener('DOMContentLoaded', () => {
         var savedName = localStorage.getItem('jeerani_name');
         if (savedName) {
             myName = savedName;
-            enterPeopleScreen();
+            // نطلب GPS فوراً حتى لو الاسم محفوظ
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    myLat = pos.coords.latitude;
+                    myLng = pos.coords.longitude;
+                    myGpsReady = true;
+                    enterPeopleScreen();
+                }, function() {
+                    enterPeopleScreen();
+                }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
+            } else {
+                enterPeopleScreen();
+            }
         } else {
             initLanding();
         }
@@ -558,6 +570,22 @@ function enterPeopleScreen() {
         delete onlineCache[snap.key];
         scheduleRender();
     });
+
+    // تحديث المسافات كل 5 ثواني — يلتقط أي تحديث GPS فاتنا
+    setInterval(function() {
+        if (currentScreen !== 'people') return;
+        document.querySelectorAll('.person-card').forEach(function(card) {
+            var uid = card.dataset.uid;
+            var u = onlineCache[uid];
+            if (u) {
+                var distEl = card.querySelector('.person-distance');
+                if (distEl) {
+                    var newDist = formatDistance(u.lat, u.lng);
+                    if (distEl.textContent !== newDist) distEl.textContent = newDist;
+                }
+            }
+        });
+    }, 5000);
 
     // استمع للرسائل
     const myMsgsRef = db.ref('msgs/' + myId);
