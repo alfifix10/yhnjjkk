@@ -129,9 +129,11 @@ const GRADIENTS = [
 ];
 
 function formatDistance(lat, lng) {
-    if (myLat === 0 || lat == null || lng == null || lat === 0) return '🟢 متصل';
+    // DEBUG: عرض القيم الحقيقية للتشخيص
+    if (myLat === 0) return '📍 موقعك غير محدد';
+    if (lat == null || lng == null || lat === 0) return '📍 موقعه غير محدد';
     var dist = getDistance(lat, lng);
-    if (isNaN(dist) || dist === Infinity) return '🟢 متصل';
+    if (isNaN(dist) || dist === Infinity) return '📍 خطأ حساب';
     var meters = Math.round(dist * 1000);
     if (meters < 10) return '🟢 بجانبك تقريباً';
     if (meters < 100) return '🟢 ' + meters + ' متر';
