@@ -492,7 +492,7 @@ function enterPeopleScreen() {
                 });
             });
         }
-        });
+
         // إخفاء spinner البحث
         var spinner = document.getElementById('searchingSpinner');
         if (spinner) spinner.style.display = 'none';
