@@ -129,7 +129,7 @@ const GRADIENTS = [
 ];
 
 function formatDistance(lat, lng) {
-    if (!myGpsReady || myLat === 0 || !lat || !lng) return '🟢 متصل';
+    if (myLat === 0 || lat == null || lng == null || lat === 0) return '🟢 متصل';
     var dist = getDistance(lat, lng);
     if (isNaN(dist) || dist === Infinity) return '🟢 متصل';
     var meters = Math.round(dist * 1000);
@@ -471,11 +471,10 @@ function enterPeopleScreen() {
     var renderTimeout = null;
 
     function scheduleRender() {
-        // ننتظر 300ms قبل الرسم — عشان لو جاء عدة تحديثات متتابعة ما نرسم كل مرة
         if (renderTimeout) clearTimeout(renderTimeout);
         renderTimeout = setTimeout(function() {
             renderPeopleFromData(onlineCache);
-        }, 300);
+        }, 500);
     }
 
     // أول تحميل
@@ -523,11 +522,15 @@ function enterPeopleScreen() {
         }
     });
 
-    // تحديثات فردية — أخف بكثير من on('value')
+    // بعد أول تحميل، نستمع للتغييرات الجديدة فقط
+    var initialLoadDone = false;
+    setTimeout(function() { initialLoadDone = true; }, 2000);
+
     presenceRef.on('child_added', function(snap) {
         if (snap.key === myId) return;
         onlineCache[snap.key] = snap.val();
-        scheduleRender();
+        // نتجاهل الأحداث أثناء التحميل الأولي (once يتكفل)
+        if (initialLoadDone) scheduleRender();
     });
     presenceRef.on('child_changed', function(snap) {
         var oldData = onlineCache[snap.key];
