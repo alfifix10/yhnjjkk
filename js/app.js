@@ -852,12 +852,6 @@ function saveToHistory(userId, text, isMe) {
     if (h.length > MAX_HISTORY_PER_USER) h.shift();
     persistChatHistory();
 }
-
-function linkify(text) {
-    var escaped = esc(text);
-    return escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:#81ecec;text-decoration:underline">$1</a>');
-}
-
 function addMsg(text, isMe, delivered = true, msgId = null) {
     var msgs = document.getElementById('chatMessages');
     var div = document.createElement('div');
@@ -866,7 +860,7 @@ function addMsg(text, isMe, delivered = true, msgId = null) {
     var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
     div.className = 'msg ' + (isMe ? 'msg-me' : 'msg-them');
     var tick = isMe ? '<span class="msg-tick">' + (delivered ? '✓' : '⏳') + '</span>' : '';
-    div.innerHTML = linkify(text) + '<span class="msg-time">' + time + ' ' + tick + '</span>';
+    div.innerHTML = esc(text) + '<span class="msg-time">' + time + ' ' + tick + '</span>';
 
     // لا تسحب للأسفل إذا المستخدم يقرأ رسائل قديمة
     var isAtBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 80;
