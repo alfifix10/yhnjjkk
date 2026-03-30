@@ -4,28 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jeerani — لوحة الإدارة</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Cairo', sans-serif; background: #0a0a0f; color: #e8e8f0; padding: 20px; }
-        h1 { font-size: 24px; margin-bottom: 20px; color: #6c5ce7; }
-        h2 { font-size: 18px; margin: 24px 0 12px; color: #00cec9; }
-        .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-        .stat { background: #12121a; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 16px 24px; flex: 1; min-width: 150px; }
-        .stat-num { font-size: 32px; font-weight: 900; color: #6c5ce7; }
-        .stat-label { font-size: 13px; color: #7f7f9a; }
-        table { width: 100%; border-collapse: collapse; background: #12121a; border-radius: 14px; overflow: hidden; }
-        th { background: #1a1a2e; color: #00cec9; padding: 12px 16px; text-align: right; font-size: 13px; }
-        td { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+        body { font-family: 'Cairo', sans-serif; background: #0a0a0f; color: #e8e8f0; padding: 20px; max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 22px; margin-bottom: 16px; }
+        h2 { font-size: 16px; margin: 20px 0 10px; color: #00cec9; }
+        .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        .stat { background: #12121a; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 14px 20px; flex: 1; min-width: 120px; }
+        .stat-num { font-size: 28px; font-weight: 900; color: #6c5ce7; }
+        .stat-label { font-size: 12px; color: #7f7f9a; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab { padding: 8px 20px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #12121a; color: #7f7f9a; cursor: pointer; font-family: 'Cairo'; font-size: 13px; }
+        .tab.active { background: #6c5ce7; color: white; border-color: #6c5ce7; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        table { width: 100%; border-collapse: collapse; background: #12121a; border-radius: 14px; overflow: hidden; margin-bottom: 16px; }
+        th { background: #1a1a2e; color: #00cec9; padding: 10px 14px; text-align: right; font-size: 12px; }
+        td { padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
         tr:hover { background: rgba(108, 92, 231, 0.05); }
-        .badge { padding: 3px 10px; border-radius: 50px; font-size: 11px; }
+        .badge { padding: 2px 8px; border-radius: 50px; font-size: 11px; }
         .badge-online { background: rgba(0,206,201,0.15); color: #00cec9; }
-        .empty { text-align: center; color: #7f7f9a; padding: 40px; }
-        #password-gate { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; gap: 16px; }
-        #password-gate input { padding: 14px 20px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.07); background: #12121a; color: #e8e8f0; font-family: 'Cairo'; font-size: 16px; width: 300px; text-align: center; }
+        .empty { text-align: center; color: #7f7f9a; padding: 30px; }
+        .conv-card { background: #12121a; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 14px 18px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .conv-card:hover { border-color: #6c5ce7; }
+        .conv-names { font-weight: 700; font-size: 14px; }
+        .conv-preview { color: #7f7f9a; font-size: 12px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
+        .conv-meta { text-align: left; min-width: 80px; }
+        .conv-count { font-size: 12px; color: #6c5ce7; font-weight: 700; }
+        .conv-time { font-size: 11px; color: #7f7f9a; }
+        .chat-view { background: #12121a; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 16px; max-height: 500px; overflow-y: auto; }
+        .chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .chat-back { padding: 6px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1a1a2e; color: #e8e8f0; cursor: pointer; font-family: 'Cairo'; font-size: 12px; }
+        .chat-msg { margin-bottom: 8px; padding: 8px 12px; border-radius: 12px; max-width: 80%; }
+        .chat-msg-right { background: #6c5ce7; color: white; margin-left: auto; border-bottom-left-radius: 4px; }
+        .chat-msg-left { background: #1a1a2e; border-bottom-right-radius: 4px; }
+        .chat-msg-name { font-size: 11px; font-weight: 700; margin-bottom: 2px; opacity: 0.7; }
+        .chat-msg-text { font-size: 13px; line-height: 1.5; }
+        .chat-msg-time { font-size: 10px; opacity: 0.5; margin-top: 2px; text-align: left; }
+        #password-gate { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; gap: 14px; }
+        #password-gate input { padding: 14px 20px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.07); background: #12121a; color: #e8e8f0; font-family: 'Cairo'; font-size: 16px; width: 280px; text-align: center; outline: none; }
+        #password-gate input:focus { border-color: #6c5ce7; }
         #password-gate button { padding: 12px 32px; border-radius: 14px; border: none; background: #6c5ce7; color: white; font-family: 'Cairo'; font-size: 16px; font-weight: 700; cursor: pointer; }
-        .msg-text { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .refresh-btn { padding: 8px 20px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #1a1a2e; color: #e8e8f0; font-family: 'Cairo'; cursor: pointer; font-size: 13px; }
+        .refresh-btn { padding: 6px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1a1a2e; color: #e8e8f0; font-family: 'Cairo'; cursor: pointer; font-size: 12px; }
         .refresh-btn:hover { background: #252540; }
     </style>
 </head>
@@ -37,8 +58,8 @@
     </div>
 
     <div id="dashboard" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-            <h1>📊 لوحة إدارة Jeerani</h1>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h1>📊 Jeerani — لوحة الإدارة</h1>
             <button class="refresh-btn" onclick="loadAll()">🔄 تحديث</button>
         </div>
 
@@ -49,27 +70,46 @@
             </div>
             <div class="stat">
                 <div class="stat-num" id="statMsgs">0</div>
-                <div class="stat-label">رسالة اليوم</div>
+                <div class="stat-label">إجمالي الرسائل</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num" id="statConvs">0</div>
+                <div class="stat-label">محادثة</div>
             </div>
         </div>
 
-        <h2>👥 المتصلين الآن</h2>
-        <table>
-            <thead><tr><th>الاسم</th><th>الحالة</th><th>آخر نشاط</th></tr></thead>
-            <tbody id="onlineTable"></tbody>
-        </table>
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('online')">👥 المتصلين</div>
+            <div class="tab" onclick="showTab('convs')">💬 المحادثات</div>
+            <div class="tab" onclick="showTab('allmsgs')">📝 كل الرسائل</div>
+        </div>
 
-        <h2>💬 آخر المحادثات</h2>
-        <table>
-            <thead><tr><th>المرسل</th><th>المستقبل</th><th>الرسالة</th><th>الوقت</th></tr></thead>
-            <tbody id="logsTable"></tbody>
-        </table>
+        <div id="panel-online" class="panel active">
+            <table>
+                <thead><tr><th>الاسم</th><th>الحالة</th><th>آخر نشاط</th></tr></thead>
+                <tbody id="onlineTable"></tbody>
+            </table>
+        </div>
+
+        <div id="panel-convs" class="panel">
+            <div id="convList"></div>
+            <div id="convDetail" style="display:none"></div>
+        </div>
+
+        <div id="panel-allmsgs" class="panel">
+            <table>
+                <thead><tr><th>المرسل</th><th>المستقبل</th><th>الرسالة</th><th>الوقت</th></tr></thead>
+                <tbody id="logsTable"></tbody>
+            </table>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
     <script>
         var ADMIN_PASS = 'jeerani2025';
+        var allLogs = [];
+        var conversations = {};
 
         firebase.initializeApp({
             apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
@@ -83,14 +123,23 @@
                 document.getElementById('password-gate').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
                 loadAll();
-            } else {
-                alert('كلمة المرور غير صحيحة');
             }
         }
+        document.getElementById('adminPass').onkeypress = function(e) { if (e.key === 'Enter') checkPass(); };
 
-        document.getElementById('adminPass').onkeypress = function(e) {
-            if (e.key === 'Enter') checkPass();
-        };
+        function showTab(name) {
+            document.querySelectorAll('.tab').forEach(function(t, i) {
+                t.classList.toggle('active', t.textContent.includes(
+                    name === 'online' ? 'المتصلين' : name === 'convs' ? 'المحادثات' : 'الرسائل'
+                ));
+            });
+            document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+            document.getElementById('panel-' + name).classList.add('active');
+            if (name === 'convs') {
+                document.getElementById('convDetail').style.display = 'none';
+                document.getElementById('convList').style.display = 'block';
+            }
+        }
 
         function loadAll() {
             // المتصلين
@@ -100,12 +149,12 @@
                 document.getElementById('statOnline').textContent = users.length;
                 var html = '';
                 if (users.length === 0) {
-                    html = '<tr><td colspan="3" class="empty">لا يوجد أحد متصل</td></tr>';
+                    html = '<tr><td colspan="3" class="empty">لا يوجد أحد</td></tr>';
                 } else {
                     users.forEach(function(entry) {
-                        var id = entry[0], u = entry[1];
-                        var time = u.t ? new Date(u.t).toLocaleTimeString('ar') : '—';
-                        html += '<tr><td><strong>' + esc(u.name || '—') + '</strong><br><small style="color:#7f7f9a">' + id.slice(0,12) + '...</small></td>';
+                        var u = entry[1];
+                        var time = u.t ? new Date(u.t).toLocaleString('ar') : '—';
+                        html += '<tr><td><strong>' + esc(u.name || '—') + '</strong></td>';
                         html += '<td><span class="badge badge-online">متصل</span></td>';
                         html += '<td>' + time + '</td></tr>';
                     });
@@ -114,24 +163,103 @@
             });
 
             // السجل
-            db.ref('logs').orderByChild('t').limitToLast(100).once('value', function(snap) {
+            db.ref('logs').orderByChild('t').limitToLast(500).once('value', function(snap) {
                 var data = snap.val() || {};
-                var msgs = Object.values(data).reverse();
-                document.getElementById('statMsgs').textContent = msgs.length;
+                allLogs = Object.values(data).sort(function(a, b) { return (b.t || 0) - (a.t || 0); });
+                document.getElementById('statMsgs').textContent = allLogs.length;
+
+                // جدول كل الرسائل
                 var html = '';
-                if (msgs.length === 0) {
+                if (allLogs.length === 0) {
                     html = '<tr><td colspan="4" class="empty">لا توجد رسائل</td></tr>';
                 } else {
-                    msgs.forEach(function(m) {
-                        var time = m.t ? new Date(m.t).toLocaleTimeString('ar') : '—';
+                    allLogs.forEach(function(m) {
+                        var time = m.t ? new Date(m.t).toLocaleString('ar') : '—';
                         html += '<tr><td>' + esc(m.fromName || '—') + '</td>';
                         html += '<td>' + esc(m.toName || '—') + '</td>';
-                        html += '<td class="msg-text">' + esc(m.text || '') + '</td>';
-                        html += '<td>' + time + '</td></tr>';
+                        html += '<td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(m.text || '') + '</td>';
+                        html += '<td style="font-size:11px">' + time + '</td></tr>';
                     });
                 }
                 document.getElementById('logsTable').innerHTML = html;
+
+                // تجميع المحادثات
+                conversations = {};
+                allLogs.forEach(function(m) {
+                    var pair = [m.from, m.to].sort().join('_');
+                    if (!conversations[pair]) {
+                        conversations[pair] = {
+                            users: {},
+                            msgs: [],
+                            lastTime: 0
+                        };
+                    }
+                    conversations[pair].users[m.from] = m.fromName;
+                    conversations[pair].users[m.to] = m.toName;
+                    conversations[pair].msgs.push(m);
+                    if (m.t > conversations[pair].lastTime) conversations[pair].lastTime = m.t;
+                });
+
+                // ترتيب بالأحدث
+                var convArr = Object.entries(conversations).sort(function(a, b) {
+                    return b[1].lastTime - a[1].lastTime;
+                });
+
+                document.getElementById('statConvs').textContent = convArr.length;
+
+                var convHtml = '';
+                if (convArr.length === 0) {
+                    convHtml = '<div class="empty">لا توجد محادثات</div>';
+                } else {
+                    convArr.forEach(function(entry) {
+                        var key = entry[0], conv = entry[1];
+                        var names = Object.values(conv.users).filter(Boolean).join(' ↔ ');
+                        var lastMsg = conv.msgs[conv.msgs.length - 1];
+                        var time = conv.lastTime ? new Date(conv.lastTime).toLocaleString('ar') : '';
+                        convHtml += '<div class="conv-card" onclick="openConv(\'' + key + '\')">';
+                        convHtml += '<div><div class="conv-names">' + esc(names) + '</div>';
+                        convHtml += '<div class="conv-preview">' + esc(lastMsg ? lastMsg.text : '') + '</div></div>';
+                        convHtml += '<div class="conv-meta"><div class="conv-count">' + conv.msgs.length + ' رسالة</div>';
+                        convHtml += '<div class="conv-time">' + time + '</div></div></div>';
+                    });
+                }
+                document.getElementById('convList').innerHTML = convHtml;
             });
+        }
+
+        function openConv(key) {
+            var conv = conversations[key];
+            if (!conv) return;
+
+            document.getElementById('convList').style.display = 'none';
+            var detail = document.getElementById('convDetail');
+            detail.style.display = 'block';
+
+            var names = Object.values(conv.users).filter(Boolean).join(' ↔ ');
+            var msgs = conv.msgs.sort(function(a, b) { return (a.t || 0) - (b.t || 0); });
+            var firstUser = msgs[0] ? msgs[0].from : '';
+
+            var html = '<div class="chat-header"><strong>' + esc(names) + ' (' + msgs.length + ' رسالة)</strong>';
+            html += '<button class="chat-back" onclick="closeConv()">← رجوع</button></div>';
+            html += '<div class="chat-view">';
+
+            msgs.forEach(function(m) {
+                var isRight = m.from === firstUser;
+                var cls = isRight ? 'chat-msg chat-msg-right' : 'chat-msg chat-msg-left';
+                var time = m.t ? new Date(m.t).toLocaleTimeString('ar') : '';
+                html += '<div class="' + cls + '">';
+                html += '<div class="chat-msg-name">' + esc(m.fromName || '—') + '</div>';
+                html += '<div class="chat-msg-text">' + esc(m.text || '') + '</div>';
+                html += '<div class="chat-msg-time">' + time + '</div></div>';
+            });
+
+            html += '</div>';
+            detail.innerHTML = html;
+        }
+
+        function closeConv() {
+            document.getElementById('convDetail').style.display = 'none';
+            document.getElementById('convList').style.display = 'block';
         }
 
         function esc(text) {
