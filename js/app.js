@@ -464,12 +464,33 @@ function enterPeopleScreen() {
             }
         });
 
-        // تنظيف السجل القديم (أكثر من 7 أيام) — مرة واحدة عند الدخول
+        // تنظيف ذكي للسجل — مرة واحدة عند الدخول
         if (!window._logsCleanedUp) {
             window._logsCleanedUp = true;
-            var weekAgo = now - (7 * 24 * 60 * 60 * 1000);
-            db.ref('logs').orderByChild('t').endAt(weekAgo).limitToFirst(50).once('value', function(s) {
-                s.forEach(function(child) { child.ref.remove(); });
+            var monthAgo = now - (30 * 24 * 60 * 60 * 1000);
+            db.ref('logs').once('value', function(s) {
+                var data = s.val() || {};
+                // تجميع بالمحادثة
+                var convs = {};
+                Object.entries(data).forEach(function(entry) {
+                    var key = entry[0], m = entry[1];
+                    var pair = [m.from, m.to].sort().join('_');
+                    if (!convs[pair]) convs[pair] = [];
+                    convs[pair].push({ key: key, t: m.t || 0 });
+                });
+                // لكل محادثة: احتفظ بآخر 50، احذف الباقي
+                // محادثات ميتة (30 يوم): احذف بالكامل
+                Object.values(convs).forEach(function(msgs) {
+                    msgs.sort(function(a, b) { return b.t - a.t; });
+                    var lastTime = msgs[0] ? msgs[0].t : 0;
+                    if (now - lastTime > monthAgo) {
+                        // محادثة ميتة — احذف الكل
+                        msgs.forEach(function(m) { db.ref('logs/' + m.key).remove(); });
+                    } else if (msgs.length > 50) {
+                        // احتفظ بآخر 50 فقط
+                        msgs.slice(50).forEach(function(m) { db.ref('logs/' + m.key).remove(); });
+                    }
+                });
             });
         }
         });
