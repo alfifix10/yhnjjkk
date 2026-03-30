@@ -450,50 +450,55 @@ function enterPeopleScreen() {
         if (myPresenceRef) myPresenceRef.update({ t: firebase.database.ServerValue.TIMESTAMP });
     }, 60000);
 
+    // نخزّن البيانات السابقة لمنع إعادة الرسم بدون سبب
+    var lastRenderedJSON = '';
+
     presenceRef.on('value', (snap) => {
-        const data = snap.val() || {};
-        // تنظيف الحسابات الميتة (أكثر من 3 دقائق)
-        const now = Date.now();
-        Object.entries(data).forEach(([id, u]) => {
+        var data = snap.val() || {};
+        // تنظيف الحسابات الميتة
+        var now = Date.now();
+        Object.entries(data).forEach(function(entry) {
+            var id = entry[0], u = entry[1];
             if (u.t && now - u.t > 3 * 60 * 1000 && id !== myId) {
                 db.ref('online/' + id).remove();
             }
         });
 
-        // تنظيف ذكي للسجل — مرة واحدة عند الدخول
+        // تنظيف السجل — مرة واحدة
         if (!window._logsCleanedUp) {
             window._logsCleanedUp = true;
-            var monthAgo = now - (30 * 24 * 60 * 60 * 1000);
             db.ref('logs').once('value', function(s) {
-                var data = s.val() || {};
-                // تجميع بالمحادثة
+                var logData = s.val() || {};
                 var convs = {};
-                Object.entries(data).forEach(function(entry) {
-                    var key = entry[0], m = entry[1];
+                Object.entries(logData).forEach(function(e) {
+                    var key = e[0], m = e[1];
+                    if (!m.from || !m.to) return;
                     var pair = [m.from, m.to].sort().join('_');
                     if (!convs[pair]) convs[pair] = [];
                     convs[pair].push({ key: key, t: m.t || 0 });
                 });
-                // لكل محادثة: احتفظ بآخر 50، احذف الباقي
-                // محادثات ميتة (30 يوم): احذف بالكامل
+                var monthAgo = now - (30 * 24 * 60 * 60 * 1000);
                 Object.values(convs).forEach(function(msgs) {
                     msgs.sort(function(a, b) { return b.t - a.t; });
-                    var lastTime = msgs[0] ? msgs[0].t : 0;
-                    if (now - lastTime > monthAgo) {
-                        // محادثة ميتة — احذف الكل
+                    if (now - (msgs[0] ? msgs[0].t : 0) > monthAgo) {
                         msgs.forEach(function(m) { db.ref('logs/' + m.key).remove(); });
                     } else if (msgs.length > 50) {
-                        // احتفظ بآخر 50 فقط
                         msgs.slice(50).forEach(function(m) { db.ref('logs/' + m.key).remove(); });
                     }
                 });
             });
         }
-        // إخفاء spinner البحث
+
         var spinner = document.getElementById('searchingSpinner');
         if (spinner) spinner.style.display = 'none';
         document.getElementById('onlineCount').textContent = '✅ متصل';
-        renderPeopleFromData(data);
+
+        // منع الوميض: نرسم فقط لو القائمة تغيّرت فعلاً
+        var userIds = Object.keys(data).filter(function(id) { return id !== myId && data[id] && data[id].name; }).sort().join(',');
+        if (userIds !== lastRenderedJSON) {
+            lastRenderedJSON = userIds;
+            renderPeopleFromData(data);
+        }
     });
 
     // استمع للرسائل
@@ -603,16 +608,7 @@ function renderPeopleFromData(data) {
     if (total <= 5) maxShow = total;
 
     var users;
-    if (!myGpsReady) {
-        // GPS لم يجهز → ننتظر بدل ما نعرض ناس من مدن بعيدة
-        count.textContent = '⏳ جاري تحديد موقعك...';
-        list.style.display = 'none';
-        noPeople.style.display = 'none';
-        return;
-    } else {
-        // فلتر: أبعد شخص معروض لازم يكون ضمن 100 كم
-        users = allUsers.slice(0, maxShow);
-    }
+    users = allUsers.slice(0, maxShow);
 
     if (users.length === 0) {
         count.textContent = 'لا يوجد أحد قريب';
@@ -630,7 +626,7 @@ function renderPeopleFromData(data) {
         var distText = formatDistance(u.lat, u.lng);
         var hasUnread = unreadFrom.has(u.id);
         return `
-            <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat}" data-ulng="${u.lng}">
+            <div class="person-card ${hasUnread ? 'has-unread' : ''}" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat || 0}" data-ulng="${u.lng || 0}">
                 <div class="person-avatar" style="background:${getGradient(u.id)}">
                     ${getAvatar(u.id)}
                     ${hasUnread ? '<span class="unread-dot"></span>' : ''}
