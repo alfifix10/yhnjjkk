@@ -463,6 +463,16 @@ function enterPeopleScreen() {
                 db.ref('online/' + id).remove();
             }
         });
+
+        // تنظيف السجل القديم (أكثر من 7 أيام) — مرة واحدة عند الدخول
+        if (!window._logsCleanedUp) {
+            window._logsCleanedUp = true;
+            var weekAgo = now - (7 * 24 * 60 * 60 * 1000);
+            db.ref('logs').orderByChild('t').endAt(weekAgo).limitToFirst(50).once('value', function(s) {
+                s.forEach(function(child) { child.ref.remove(); });
+            });
+        }
+        });
         // إخفاء spinner البحث
         var spinner = document.getElementById('searchingSpinner');
         if (spinner) spinner.style.display = 'none';
