@@ -378,13 +378,13 @@ function startGeoWatch() {
             myLng = newLng;
             myGpsReady = true;
 
-            // حدّث Firebase + أعد عرض القائمة
             if (myPresenceRef) {
                 myPresenceRef.update({ lat: myLat, lng: myLng, acc: Math.round(accuracy) });
             }
-            // تحديث المسافات في القائمة
-            if (presenceRef && currentScreen === 'people') {
-                presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
+            // لو وصلنا لدقة جيدة (< 100م) — نوقف GPS لتوفير البطارية
+            if (accuracy < 100 && geoWatchId !== null) {
+                navigator.geolocation.clearWatch(geoWatchId);
+                geoWatchId = null;
             }
         },
         function() {},
@@ -428,6 +428,14 @@ function enterPeopleScreen() {
     db.ref('.info/connected').on('value', function(snap) {
         var banner = document.getElementById('offlineBanner');
         if (snap.val() === true) {
+            if (wasConnected) {
+                // عاد الاتصال — نعيد تسجيل الحضور
+                if (myPresenceRef) {
+                    var presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
+                    if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
+                    myPresenceRef.set(presenceData);
+                }
+            }
             wasConnected = true;
             if (banner) banner.style.display = 'none';
             if (myPresenceRef) myPresenceRef.onDisconnect().remove();
@@ -450,19 +458,36 @@ function enterPeopleScreen() {
         if (myPresenceRef) myPresenceRef.update({ t: firebase.database.ServerValue.TIMESTAMP });
     }, 60000);
 
-    // نخزّن البيانات السابقة لمنع إعادة الرسم بدون سبب
-    var lastRenderedJSON = '';
+    // كاش محلي للمتصلين — نحدّث بذكاء بدون إعادة تحميل الكل
+    var onlineCache = {};
+    var renderTimeout = null;
 
-    presenceRef.on('value', (snap) => {
-        var data = snap.val() || {};
+    function scheduleRender() {
+        // ننتظر 300ms قبل الرسم — عشان لو جاء عدة تحديثات متتابعة ما نرسم كل مرة
+        if (renderTimeout) clearTimeout(renderTimeout);
+        renderTimeout = setTimeout(function() {
+            renderPeopleFromData(onlineCache);
+        }, 300);
+    }
+
+    // أول تحميل
+    presenceRef.once('value', function(snap) {
+        onlineCache = snap.val() || {};
+        var spinner = document.getElementById('searchingSpinner');
+        if (spinner) spinner.style.display = 'none';
+        document.getElementById('onlineCount').textContent = '✅ متصل';
+
         // تنظيف الحسابات الميتة
         var now = Date.now();
-        Object.entries(data).forEach(function(entry) {
-            var id = entry[0], u = entry[1];
-            if (u.t && now - u.t > 3 * 60 * 1000 && id !== myId) {
+        Object.keys(onlineCache).forEach(function(id) {
+            var u = onlineCache[id];
+            if (u && u.t && now - u.t > 3 * 60 * 1000 && id !== myId) {
                 db.ref('online/' + id).remove();
+                delete onlineCache[id];
             }
         });
+
+        renderPeopleFromData(onlineCache);
 
         // تنظيف السجل — مرة واحدة
         if (!window._logsCleanedUp) {
@@ -488,17 +513,21 @@ function enterPeopleScreen() {
                 });
             });
         }
+    });
 
-        var spinner = document.getElementById('searchingSpinner');
-        if (spinner) spinner.style.display = 'none';
-        document.getElementById('onlineCount').textContent = '✅ متصل';
-
-        // منع الوميض: نرسم فقط لو القائمة تغيّرت فعلاً
-        var userIds = Object.keys(data).filter(function(id) { return id !== myId && data[id] && data[id].name; }).sort().join(',');
-        if (userIds !== lastRenderedJSON) {
-            lastRenderedJSON = userIds;
-            renderPeopleFromData(data);
-        }
+    // تحديثات فردية — أخف بكثير من on('value')
+    presenceRef.on('child_added', function(snap) {
+        if (snap.key === myId) return;
+        onlineCache[snap.key] = snap.val();
+        scheduleRender();
+    });
+    presenceRef.on('child_changed', function(snap) {
+        onlineCache[snap.key] = snap.val();
+        // ما نعيد الرسم عند تغيير timestamp فقط
+    });
+    presenceRef.on('child_removed', function(snap) {
+        delete onlineCache[snap.key];
+        scheduleRender();
     });
 
     // استمع للرسائل
@@ -510,22 +539,24 @@ function enterPeopleScreen() {
         // تجاهل رسائل المحظورين
         if (blockedUsers.has(msg.from)) { snap.ref.remove(); return; }
 
-        if (currentChatUser && currentChatUser.id === msg.from) {
-            addMsg(msg.text, false);
-            saveToHistory(msg.from, msg.text, false);
-            if (navigator.vibrate) navigator.vibrate(50);
-        } else {
-            saveToHistory(msg.from, msg.text, false);
-            unreadFrom.add(msg.from);
-            // الصوت فقط لو أنت بصفحة الجيران (مو بدردشة ثانية)
-            if (currentScreen === 'people') {
-                presenceRef.once('value', s => { renderPeopleFromData(s.val() || {}); });
-                playNotif();
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        try {
+            if (currentChatUser && currentChatUser.id === msg.from) {
+                addMsg(msg.text, false);
+                saveToHistory(msg.from, msg.text, false);
+                if (navigator.vibrate) navigator.vibrate(50);
+            } else {
+                saveToHistory(msg.from, msg.text, false);
+                unreadFrom.add(msg.from);
+                if (currentScreen === 'people') {
+                    playNotif();
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                }
             }
+            // نحذف فقط بعد النجاح
+            snap.ref.remove();
+        } catch(e) {
+            // لو فشل العرض — ما نحذف الرسالة عشان ما تضيع
         }
-
-        snap.ref.remove();
     });
 
     document.getElementById('backToLanding').onclick = () => {

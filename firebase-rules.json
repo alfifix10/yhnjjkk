@@ -26,7 +26,10 @@
     },
     "logs": {
       ".read": true,
-      ".write": true
+      "$msgId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['from', 'fromName', 'to', 'toName', 'text', 't']) && newData.child('text').val().length <= 500"
+      }
     },
     "$other": {
       ".read": false,
