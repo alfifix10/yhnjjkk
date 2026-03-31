@@ -263,7 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
         var savedName = localStorage.getItem('jeerani_name');
         if (savedName) {
             myName = savedName;
-            // ندخل فوراً — GPS يشتغل بالخلفية
+            // نحاول نحصل الموقع من IP فوراً (سريع وما يحتاج إذن)
+            getLocationByIP();
             enterPeopleScreen();
         } else {
             initLanding();
@@ -346,14 +347,8 @@ function startGpsPoll() {
                 var steps = isIOS
                     ? 'الإعدادات ← Safari ← الموقع ← اسمح\nثم ارجع وحدّث الصفحة'
                     : 'اضغط على 🔒 بجانب الرابط\nاختر "أذونات الموقع" ← سماح\nثم حدّث الصفحة';
-                showModal({
-                    title: '📍 فعّل تحديد الموقع',
-                    message: 'عشان تشوف المسافة بينك وبين جيرانك، فعّل الموقع:\n\n' + steps,
-                    buttons: [
-                        { text: 'حدّث الصفحة', cls: 'modal-btn-primary', action: function() { location.reload(); } },
-                        { text: 'لاحقاً', cls: 'modal-btn-cancel', action: function() {} }
-                    ]
-                });
+                // الخطة البديلة: IP Geolocation بدون إذن!
+                getLocationByIP();
             }
         }, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
     }
@@ -376,6 +371,34 @@ function cleanStaleUsers(cache) {
             delete cache[id];
         }
     });
+}
+
+// خطة بديلة: لو GPS مرفوض — نحصل الموقع من IP (بدون إذن!)
+function getLocationByIP() {
+    if (myLat) return; // GPS شغّال — ما نحتاج
+    fetch('https://ipapi.co/json/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.latitude && data.longitude && !myLat) {
+                myLat = data.latitude;
+                myLng = data.longitude;
+                if (myPresenceRef) myPresenceRef.update({ lat: myLat, lng: myLng });
+                updateAllDistances();
+            }
+        })
+        .catch(function() {
+            // نجرب API ثاني
+            fetch('https://ip-api.com/json/?fields=lat,lon')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.lat && data.lon && !myLat) {
+                        myLat = data.lat;
+                        myLng = data.lon;
+                        if (myPresenceRef) myPresenceRef.update({ lat: myLat, lng: myLng });
+                        updateAllDistances();
+                    }
+                }).catch(function() {});
+        });
 }
 
 function updateAllDistances() {
