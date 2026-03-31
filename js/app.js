@@ -881,13 +881,8 @@ function startChat(userId, userName, uLat, uLng) {
         db.ref('typing/' + userId + '/' + myId).set(null);
         clearTimeout(typingTimeout);
 
-        // timeout: لو Firebase ما رد خلال 10 ثواني = فشل
         var sendTimeout = setTimeout(function() {
-            var msgEl = document.getElementById(thisMsgId);
-            if (msgEl) {
-                var tick = msgEl.querySelector('.msg-tick');
-                if (tick && tick.textContent === '⏳') tick.textContent = '❌';
-            }
+            // لو ما وصل رد بعد 10 ثواني — نخلي ⏳ (ما نعرض ❌)
         }, 10000);
 
         var msgData = {
@@ -899,14 +894,13 @@ function startChat(userId, userName, uLat, uLng) {
             t: firebase.database.ServerValue.TIMESTAMP
         };
 
-        // إرسال + حفظ نسخة في السجل
+        // إرسال الرسالة — العلامة مربوطة بالإرسال مو السجل
         db.ref('msgs/' + userId).push({
             from: myId,
             name: myName,
             text: text,
             t: firebase.database.ServerValue.TIMESTAMP
-        });
-        db.ref('logs').push(msgData).then(function() {
+        }).then(function() {
             clearTimeout(sendTimeout);
             var msgEl = document.getElementById(thisMsgId);
             if (msgEl) {
@@ -915,12 +909,9 @@ function startChat(userId, userName, uLat, uLng) {
             }
         }).catch(function() {
             clearTimeout(sendTimeout);
-            var msgEl = document.getElementById(thisMsgId);
-            if (msgEl) {
-                var tick = msgEl.querySelector('.msg-tick');
-                if (tick) tick.textContent = '❌';
-            }
         });
+        // حفظ نسخة بالسجل بالخلفية
+        db.ref('logs').push(msgData).catch(function() {});
     };
 
     sendBtn.onclick = sendMsg;
