@@ -129,9 +129,9 @@ const GRADIENTS = [
 ];
 
 function formatDistance(lat, lng) {
-    if (!myLat || !lat || !lng) return '🟢 متصل';
+    if (!myLat || !lat || !lng) return '';
     var dist = getDistance(lat, lng);
-    if (!dist || isNaN(dist) || dist === Infinity) return '🟢 متصل';
+    if (!dist || isNaN(dist) || dist === Infinity) return '';
     var m = Math.round(dist * 1000);
     if (m < 10) return '🟢 بجانبك تقريباً';
     if (m < 100) return '🟢 ' + m + ' متر';
@@ -593,8 +593,16 @@ function enterPeopleScreen() {
         var oldData = onlineCache[snap.key] || {};
         var newData = snap.val();
         // نحتفظ بالإحداثيات القديمة لو الجديدة ما فيها
-        if (oldData.lat && !newData.lat) { newData.lat = oldData.lat; newData.lng = oldData.lng; }
+        if (oldData && oldData.lat && !newData.lat) { newData.lat = oldData.lat; newData.lng = oldData.lng; }
+        let hadCoords = oldData && oldData.lat;
+        let hasCoords = newData.lat;
         onlineCache[snap.key] = newData;
+
+        // لو حصل على إحداثيات جديدة ما كانت موجودة → نعيد رسم القائمة (يظهر بالقائمة لأول مرة)
+        if (!hadCoords && hasCoords) {
+            scheduleRender();
+            return;
+        }
 
         var card = document.querySelector('[data-uid="' + snap.key + '"]');
         if (card && newData) {
