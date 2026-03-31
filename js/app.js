@@ -487,22 +487,8 @@ function enterPeopleScreen() {
         }, 1000);
         setTimeout(function() {
             clearInterval(waitGps);
-            if (myLat === 0) {
-                // GPS فشل — نعرض كل المتصلين بدون مسافات
-                var spinner = document.getElementById('searchingSpinner');
-                if (spinner) spinner.style.display = 'none';
-                document.getElementById('onlineCount').textContent = '✅ متصل';
-                presenceRef.once('value', function(snap) {
-                    var data = snap.val() || {};
-                    Object.keys(data).forEach(function(id) {
-                        if (id !== myId && data[id] && data[id].name && !blockedUsers.has(id)) {
-                            nearbyUsers[id] = { name: data[id].name, dist: null };
-                        }
-                    });
-                    renderNearbyList();
-                });
-            }
-        }, 15000);
+            if (myLat === 0) showAllUsersAsFallback();
+        }, 5000);
     }
 
     function startGeoQuery() {
@@ -535,6 +521,26 @@ function enterPeopleScreen() {
 
         geoQuery.on('key_exited', function(key) {
             delete nearbyUsers[key];
+            renderNearbyList();
+        });
+
+        // لو GeoQuery ما لقى أحد بعد 5 ثواني → fallback
+        setTimeout(function() {
+            if (Object.keys(nearbyUsers).length === 0) showAllUsersAsFallback();
+        }, 5000);
+    }
+
+    function showAllUsersAsFallback() {
+        var spinner = document.getElementById('searchingSpinner');
+        if (spinner) spinner.style.display = 'none';
+        document.getElementById('onlineCount').textContent = '✅ متصل';
+        presenceRef.once('value', function(snap) {
+            var data = snap.val() || {};
+            Object.keys(data).forEach(function(id) {
+                if (id !== myId && data[id] && data[id].name && !blockedUsers.has(id)) {
+                    nearbyUsers[id] = { name: data[id].name, dist: null };
+                }
+            });
             renderNearbyList();
         });
     }
