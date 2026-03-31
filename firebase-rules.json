@@ -7,12 +7,18 @@
         ".validate": "newData.hasChildren(['name', 't']) && newData.child('name').isString() && newData.child('name').val().length <= 20"
       }
     },
+    "geo": {
+      ".read": true,
+      "$uid": {
+        ".write": true
+      }
+    },
     "msgs": {
       "$recipientId": {
         ".read": true,
         "$msgId": {
           ".write": true,
-          ".validate": "newData.hasChildren(['from', 'name', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length <= 500 && newData.child('name').val().length <= 20"
+          ".validate": "newData.hasChildren(['from', 'name', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length <= 500"
         }
       }
     },
@@ -27,8 +33,7 @@
     "logs": {
       ".read": true,
       "$msgId": {
-        ".write": true,
-        ".validate": "newData.hasChildren(['from', 'fromName', 'to', 'toName', 'text', 't']) && newData.child('text').val().length <= 500"
+        ".write": true
       }
     },
     "$other": {

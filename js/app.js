@@ -107,6 +107,9 @@ function persistChatHistory() {
         localStorage.setItem('jeerani_history', JSON.stringify(arr));
     } catch(e) {}
 }
+var geoFire = null;
+var geoQuery = null;
+var nearbyUsers = {};
 let presenceRef = null;
 let myPresenceRef = null;
 let msgListener = null;
@@ -128,17 +131,13 @@ const GRADIENTS = [
     'linear-gradient(135deg, #a29bfe, #fd79a8)',
 ];
 
-function formatDistance(lat, lng) {
-    if (typeof myLat !== 'number' || myLat === 0) return '🟢 متصل';
-    if (typeof lat !== 'number' || typeof lng !== 'number' || lat === 0) return '🟢 متصل';
-    var dist = getDistance(lat, lng);
-    if (isNaN(dist) || dist === Infinity) return '🟢 متصل';
-    var meters = Math.round(dist * 1000);
+function formatDistanceKm(distKm) {
+    if (distKm == null || isNaN(distKm)) return '🟢 متصل';
+    var meters = Math.round(distKm * 1000);
     if (meters < 10) return '🟢 بجانبك تقريباً';
     if (meters < 100) return '🟢 ' + meters + ' متر';
     if (meters < 1000) return '🟡 ' + meters + ' متر';
-    if (dist < 10) return '🟠 ' + dist.toFixed(1) + ' كم';
-    return '⚪ ' + Math.round(dist) + ' كم';
+    return '🟠 ' + distKm.toFixed(1) + ' كم';
 }
 
 var myGpsReady = false; // يصبح true فقط لما الدقة < 100 متر
@@ -391,17 +390,9 @@ function startGeoWatch() {
             myLng = newLng;
             myGpsReady = true;
 
-            if (myPresenceRef) {
-                myPresenceRef.update({ lat: myLat, lng: myLng, acc: Math.round(accuracy) });
-            }
-            // تحديث كل المسافات بالقائمة بدون إعادة رسم
-            document.querySelectorAll('.person-card').forEach(function(card) {
-                var uid = card.dataset.uid;
-                var u = onlineCache[uid];
-                if (!u) return;
-                var distEl = card.querySelector('.person-distance');
-                if (distEl) distEl.textContent = formatDistance(u.lat, u.lng);
-            });
+            // تحديث GeoFire + Firebase
+            if (geoFire) geoFire.set(myId, [myLat, myLng]).catch(function() {});
+            if (geoQuery) geoQuery.updateCriteria({ center: [myLat, myLng] });
 
             // لو وصلنا لدقة جيدة (< 100م) — نوقف GPS لتوفير البطارية
             if (accuracy < 100 && geoWatchId !== null) {
@@ -472,118 +463,90 @@ function enterPeopleScreen() {
     myPresenceRef.onDisconnect().remove();
 
     // [FIX 2] heartbeat واحد فقط
-    heartbeatInterval = setInterval(() => {
+    heartbeatInterval = setInterval(function() {
         if (myPresenceRef) myPresenceRef.update({ t: firebase.database.ServerValue.TIMESTAMP });
     }, 60000);
 
-    // كاش محلي للمتصلين — نحدّث بذكاء بدون إعادة تحميل الكل
-    var onlineCache = {};
-    var renderTimeout = null;
+    // GeoFire — حفظ موقعي والبحث عن الجيران
+    geoFire = new GeoFire(db.ref('geo'));
+    nearbyUsers = {};
 
-    function scheduleRender() {
-        if (renderTimeout) clearTimeout(renderTimeout);
-        renderTimeout = setTimeout(function() {
-            renderPeopleFromData(onlineCache);
-        }, 500);
+    if (myLat !== 0) {
+        geoFire.set(myId, [myLat, myLng]).catch(function() {});
+        db.ref('geo/' + myId).onDisconnect().remove();
+        startGeoQuery();
+    } else {
+        document.getElementById('onlineCount').textContent = '⏳ جاري تحديد موقعك...';
+        var waitGps = setInterval(function() {
+            if (myLat !== 0) {
+                clearInterval(waitGps);
+                geoFire.set(myId, [myLat, myLng]).catch(function() {});
+                db.ref('geo/' + myId).onDisconnect().remove();
+                startGeoQuery();
+            }
+        }, 1000);
+        setTimeout(function() { clearInterval(waitGps); }, 20000);
     }
 
-    // أول تحميل
-    presenceRef.once('value', function(snap) {
-        onlineCache = snap.val() || {};
+    function startGeoQuery() {
         var spinner = document.getElementById('searchingSpinner');
         if (spinner) spinner.style.display = 'none';
         document.getElementById('onlineCount').textContent = '✅ متصل';
 
-        // تنظيف الحسابات الميتة
-        var now = Date.now();
-        Object.keys(onlineCache).forEach(function(id) {
-            var u = onlineCache[id];
-            if (u && u.t && now - u.t > 3 * 60 * 1000 && id !== myId) {
-                db.ref('online/' + id).remove();
-                delete onlineCache[id];
-            }
+        geoQuery = geoFire.query({ center: [myLat, myLng], radius: 100 });
+
+        geoQuery.on('key_entered', function(key, location, distance) {
+            if (key === myId || myOldIds.has(key) || blockedUsers.has(key)) return;
+            db.ref('online/' + key + '/name').once('value', function(snap) {
+                var name = snap.val();
+                if (!name) return;
+                nearbyUsers[key] = { name: name, dist: distance };
+                renderNearbyList();
+            });
         });
 
-        renderPeopleFromData(onlineCache);
-
-        // تنظيف السجل — مرة واحدة
-        if (!window._logsCleanedUp) {
-            window._logsCleanedUp = true;
-            db.ref('logs').once('value', function(s) {
-                var logData = s.val() || {};
-                var convs = {};
-                Object.entries(logData).forEach(function(e) {
-                    var key = e[0], m = e[1];
-                    if (!m.from || !m.to) return;
-                    var pair = [m.from, m.to].sort().join('_');
-                    if (!convs[pair]) convs[pair] = [];
-                    convs[pair].push({ key: key, t: m.t || 0 });
-                });
-                var monthAgo = now - (30 * 24 * 60 * 60 * 1000);
-                Object.values(convs).forEach(function(msgs) {
-                    msgs.sort(function(a, b) { return b.t - a.t; });
-                    if (now - (msgs[0] ? msgs[0].t : 0) > monthAgo) {
-                        msgs.forEach(function(m) { db.ref('logs/' + m.key).remove(); });
-                    } else if (msgs.length > 50) {
-                        msgs.slice(50).forEach(function(m) { db.ref('logs/' + m.key).remove(); });
-                    }
-                });
-            });
-        }
-    });
-
-    // بعد أول تحميل، نستمع للتغييرات الجديدة فقط
-    var initialLoadDone = false;
-    setTimeout(function() { initialLoadDone = true; }, 2000);
-
-    presenceRef.on('child_added', function(snap) {
-        if (snap.key === myId) return;
-        onlineCache[snap.key] = snap.val();
-        // نتجاهل الأحداث أثناء التحميل الأولي (once يتكفل)
-        if (initialLoadDone) scheduleRender();
-    });
-    presenceRef.on('child_changed', function(snap) {
-        var oldData = onlineCache[snap.key];
-        var newData = snap.val();
-        onlineCache[snap.key] = newData;
-
-        // تحديث المسافة بدون إعادة رسم القائمة بالكامل
-        var card = document.querySelector('[data-uid="' + snap.key + '"]');
-        if (card && newData) {
-            // تحديث المسافة
-            var distEl = card.querySelector('.person-distance');
-            if (distEl) distEl.textContent = formatDistance(newData.lat, newData.lng);
-            // تحديث الاسم لو تغيّر
-            if (oldData && oldData.name !== newData.name) {
-                var nameEl = card.querySelector('.person-name');
-                if (nameEl) nameEl.textContent = newData.name;
-                card.dataset.uname = newData.name;
-            }
-            // تحديث الإحداثيات في الـ data attributes
-            if (newData.lat) card.dataset.ulat = newData.lat;
-            if (newData.lng) card.dataset.ulng = newData.lng;
-        }
-    });
-    presenceRef.on('child_removed', function(snap) {
-        delete onlineCache[snap.key];
-        scheduleRender();
-    });
-
-    // تحديث المسافات كل 5 ثواني — يلتقط أي تحديث GPS فاتنا
-    setInterval(function() {
-        if (currentScreen !== 'people') return;
-        document.querySelectorAll('.person-card').forEach(function(card) {
-            var uid = card.dataset.uid;
-            var u = onlineCache[uid];
-            if (u) {
-                var distEl = card.querySelector('.person-distance');
-                if (distEl) {
-                    var newDist = formatDistance(u.lat, u.lng);
-                    if (distEl.textContent !== newDist) distEl.textContent = newDist;
+        geoQuery.on('key_moved', function(key, location, distance) {
+            if (nearbyUsers[key]) {
+                nearbyUsers[key].dist = distance;
+                var card = document.querySelector('[data-uid="' + key + '"]');
+                if (card) {
+                    var distEl = card.querySelector('.person-distance');
+                    if (distEl) distEl.textContent = formatDistanceKm(distance);
                 }
             }
         });
-    }, 5000);
+
+        geoQuery.on('key_exited', function(key) {
+            delete nearbyUsers[key];
+            renderNearbyList();
+        });
+    }
+
+    // تنظيف السجل — مرة واحدة
+    if (!window._logsCleanedUp) {
+        window._logsCleanedUp = true;
+        var now = Date.now();
+        db.ref('logs').once('value', function(s) {
+            var logData = s.val() || {};
+            var convs = {};
+            Object.entries(logData).forEach(function(e) {
+                var key = e[0], m = e[1];
+                if (!m.from || !m.to) return;
+                var pair = [m.from, m.to].sort().join('_');
+                if (!convs[pair]) convs[pair] = [];
+                convs[pair].push({ key: key, t: m.t || 0 });
+            });
+            var monthAgo = now - (30 * 24 * 60 * 60 * 1000);
+            Object.values(convs).forEach(function(msgs) {
+                msgs.sort(function(a, b) { return b.t - a.t; });
+                if (now - (msgs[0] ? msgs[0].t : 0) > monthAgo) {
+                    msgs.forEach(function(m) { db.ref('logs/' + m.key).remove(); });
+                } else if (msgs.length > 50) {
+                    msgs.slice(50).forEach(function(m) { db.ref('logs/' + m.key).remove(); });
+                }
+            });
+        });
+    }
 
     // استمع للرسائل
     const myMsgsRef = db.ref('msgs/' + myId);
@@ -670,38 +633,16 @@ function enterPeopleScreen() {
     document.getElementById('shareBtn')?.addEventListener('click', shareLink);
 }
 
-function renderPeopleFromData(data) {
+function renderNearbyList() {
     var list = document.getElementById('peopleList');
     var noPeople = document.getElementById('noPeople');
     var count = document.getElementById('onlineCount');
+    var spinner = document.getElementById('searchingSpinner');
+    if (spinner) spinner.style.display = 'none';
 
-    var allUsers = [];
-    Object.entries(data).forEach(function(entry) {
-        var id = entry[0], u = entry[1];
-        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
-            u.id = id;
-            // حساب المسافة لكل مستخدم
-            if (myGpsReady && u.lat && u.lng) {
-                u._dist = getDistance(u.lat, u.lng);
-            } else {
-                u._dist = 99999; // بدون GPS → يروح آخر القائمة
-            }
-            allUsers.push(u);
-        }
-    });
-
-    // ترتيب بالمسافة — الأقرب أولاً
-    allUsers.sort(function(a, b) { return a._dist - b._dist; });
-
-    // النظام الذكي التدريجي:
-    // معادلة سلسة: كل ما زاد مستخدم، ينقص العدد المعروض بشكل تدريجي
-    // maxShow = 20 عند 1 مستخدم، ينزل تدريجياً لـ 8 عند 200+ مستخدم
-    var total = allUsers.length;
-    var maxShow = Math.max(8, Math.round(20 - (total * 0.06)));
-    if (total <= 5) maxShow = total;
-
-    var users;
-    users = allUsers.slice(0, maxShow);
+    var users = Object.entries(nearbyUsers)
+        .filter(function(e) { return !blockedUsers.has(e[0]); })
+        .sort(function(a, b) { return (a[1].dist || 99999) - (b[1].dist || 99999); });
 
     if (users.length === 0) {
         count.textContent = 'لا يوجد أحد قريب';
@@ -711,31 +652,29 @@ function renderPeopleFromData(data) {
     }
 
     count.textContent = users.length + ' جار قريب';
-
     list.style.display = 'flex';
     noPeople.style.display = 'none';
 
-    list.innerHTML = users.map((u, i) => {
-        var distText = formatDistance(u.lat, u.lng);
-        var hasUnread = unreadFrom.has(u.id);
-        return `
-            <div class="person-card ${hasUnread ? 'has-unread' : ''}" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat || ''}" data-ulng="${u.lng || ''}">
-                <div class="person-avatar" style="background:${getGradient(u.id)}">
-                    ${getAvatar(u.id)}
-                    ${hasUnread ? '<span class="unread-dot"></span>' : ''}
-                </div>
-                <div class="person-info">
-                    <div class="person-name">${esc(u.name)} ${hasUnread ? '<span class="new-msg-badge">رسالة جديدة</span>' : ''}</div>
-                    <div class="person-distance">${distText}</div>
-                </div>
-                <div class="person-arrow">←</div>
-            </div>`;
+    list.innerHTML = users.map(function(entry) {
+        var uid = entry[0], u = entry[1];
+        var distText = formatDistanceKm(u.dist);
+        var hasUnread = unreadFrom.has(uid);
+        return '<div class="person-card ' + (hasUnread ? 'has-unread' : '') + '" data-uid="' + uid + '" data-uname="' + esc(u.name) + '">' +
+            '<div class="person-avatar" style="background:' + getGradient(uid) + '">' +
+                getAvatar(uid) +
+                (hasUnread ? '<span class="unread-dot"></span>' : '') +
+            '</div>' +
+            '<div class="person-info">' +
+                '<div class="person-name">' + esc(u.name) + (hasUnread ? ' <span class="new-msg-badge">رسالة جديدة</span>' : '') + '</div>' +
+                '<div class="person-distance">' + distText + '</div>' +
+            '</div>' +
+            '<div class="person-arrow">←</div>' +
+        '</div>';
     }).join('');
 
-    // ربط الأحداث بأمان
-    list.querySelectorAll('.person-card').forEach(card => {
-        card.onclick = () => {
-            startChat(card.dataset.uid, card.dataset.uname, parseFloat(card.dataset.ulat) || 0, parseFloat(card.dataset.ulng) || 0);
+    list.querySelectorAll('.person-card').forEach(function(card) {
+        card.onclick = function() {
+            startChat(card.dataset.uid, card.dataset.uname, 0, 0);
         };
     });
 }
@@ -750,7 +689,7 @@ function startChat(userId, userName, uLat, uLng) {
     history.pushState({ screen: 'chat' }, '', '');
 
     document.getElementById('chatWith').textContent = userName;
-    document.getElementById('chatDistance').textContent = formatDistance(uLat, uLng);
+    document.getElementById('chatDistance').textContent = formatDistanceKm(nearbyUsers[userId] ? nearbyUsers[userId].dist : null);
 
     var msgsDiv = document.getElementById('chatMessages');
     msgsDiv.innerHTML = '';
@@ -784,7 +723,7 @@ function startChat(userId, userName, uLat, uLng) {
                 currentChatUser.name = data.name;
                 addSystemMsg('غيّر اسمه إلى: ' + data.name);
             }
-            statusEl.textContent = formatDistance(data.lat, data.lng);
+            statusEl.textContent = formatDistanceKm(nearbyUsers[userId] ? nearbyUsers[userId].dist : null);
             statusEl.style.color = '';
             partnerWasOnline = true;
         } else if (partnerWasOnline) {
@@ -1029,6 +968,9 @@ function cleanup() {
     if (msgListener) { db.ref('msgs/' + myId).off(); msgListener = null; }
     if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
     if (geoWatchId !== null) { navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
+    if (geoQuery) { geoQuery.cancel(); geoQuery = null; }
+    if (geoFire) { try { geoFire.remove(myId); } catch(e) {} geoFire = null; }
+    nearbyUsers = {};
     unreadFrom.clear();
     currentChatUser = null;
 }
