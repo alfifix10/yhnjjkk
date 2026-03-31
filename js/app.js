@@ -72,21 +72,20 @@ function getOrCreateId() {
     return id;
 }
 
-var myId = getOrCreateId();
-var myName = '';
-var myLat = 0;
-var myLng = 0;
-var currentChatUser = null;
-var unreadFrom = new Set();
-var myOldIds;
+const myId = getOrCreateId();
+let myName = '';
+let myLat = 0;
+let myLng = 0;
+let currentChatUser = null;
+const unreadFrom = new Set();
+let myOldIds;
 try { myOldIds = new Set(JSON.parse(localStorage.getItem('jeerani_old_ids') || '[]')); } catch(e) { myOldIds = new Set(); }
-var blockedUsers;
+let blockedUsers;
 try { blockedUsers = new Set(JSON.parse(localStorage.getItem('jeerani_blocked') || '[]')); } catch(e) { blockedUsers = new Set(); }
-var lastMsgTime = 0;
-var myGpsAccuracy = 0;
-var msgsSentInMinute = 0;
-var minuteStart = Date.now();
-var chatHistory = loadChatHistory();
+let lastMsgTime = 0;
+let msgsSentInMinute = 0;
+let minuteStart = Date.now();
+let chatHistory = loadChatHistory();
 
 function loadChatHistory() {
     try {
@@ -115,6 +114,7 @@ let currentScreen = 'landing';
 let heartbeatInterval = null;
 let partnerWasOnline = true;
 let typingTimeout = null;
+const _intervals = []; // كل الـ intervals عشان نقدر ننظفها
 
 const AVATARS = ['😎','🦊','🐱','🦁','🐸','🦉','🐼','🐨','🦋','🌸','⚡','🔥','🌙','🎭','👻','🤖','🎯','💎','🌈','🍀'];
 const GRADIENTS = [
@@ -148,9 +148,6 @@ function hashCode(str) {
 }
 
 // تقريب الإحداثيات — 3 خانات عشرية = دقة ~100 متر (حماية الخصوصية)
-function roundCoord(val) {
-    return Math.round(val * 1000) / 1000;
-}
 
 const MAX_HISTORY_PER_USER = 100;
 
@@ -319,7 +316,6 @@ function initLanding() {
 }
 
 
-let enteredFromGeo = false;
 
 function requestLocation() {
     var btn = document.getElementById('joinBtn');
@@ -329,7 +325,7 @@ function requestLocation() {
 }
 
 // polling GPS كل 10 ثواني — أوثق من watchPosition
-var gpsPollInterval = null;
+let gpsPollInterval = null;
 function startGpsPoll() {
     if (gpsPollInterval || !navigator.geolocation) return;
 
@@ -476,9 +472,9 @@ function enterPeopleScreen() {
     }, 60000);
 
     // كاش محلي للمتصلين — نحدّث بذكاء بدون إعادة تحميل الكل
-    var onlineCache = {};
+    let onlineCache = {};
     window._onlineCache = onlineCache;
-    var renderTimeout = null;
+    let renderTimeout = null;
 
     function scheduleRender() {
         if (renderTimeout) clearTimeout(renderTimeout);
@@ -519,7 +515,7 @@ function enterPeopleScreen() {
         renderPeopleFromData(onlineCache);
 
         // تنظيف دوري كل 30 ثانية
-        setInterval(function() {
+        _intervals.push(setInterval(function() {
             presenceRef.once('value', function(snap) {
                 var data = snap.val() || {};
                 var cleaned = false;
@@ -533,7 +529,7 @@ function enterPeopleScreen() {
                 });
                 if (cleaned) renderPeopleFromData(onlineCache);
             });
-        }, 30000);
+        }, 30000));
 
         // تنظيف السجل — مرة واحدة
         if (!window._logsCleanedUp) {
@@ -597,8 +593,8 @@ function enterPeopleScreen() {
         scheduleRender();
     });
 
-    // تحديث المسافات كل 5 ثواني — يلتقط أي تحديث GPS فاتنا
-    setInterval(function() {
+    // تحديث المسافات كل 5 ثواني
+    _intervals.push(setInterval(function() {
         if (currentScreen !== 'people') return;
         document.querySelectorAll('.person-card').forEach(function(card) {
             var uid = card.dataset.uid;
@@ -611,22 +607,8 @@ function enterPeopleScreen() {
                 }
             }
         });
-    }, 5000);
+    }, 5000));
 
-    // تحديث المسافات كل 10 ثواني
-    setInterval(function() {
-        if (currentScreen !== 'people') return;
-        document.querySelectorAll('.person-card').forEach(function(card) {
-            var uid = card.dataset.uid;
-            var u = onlineCache[uid];
-            if (!u) return;
-            var distEl = card.querySelector('.person-distance');
-            if (distEl) {
-                var d = formatDistance(u.lat, u.lng);
-                if (distEl.textContent !== d) distEl.textContent = d;
-            }
-        });
-    }, 10000);
 
     // استمع للرسائل
     const myMsgsRef = db.ref('msgs/' + myId);
@@ -923,9 +905,6 @@ function startChat(userId, userName, uLat, uLng) {
         db.ref('typing/' + userId + '/' + myId).set(null);
         clearTimeout(typingTimeout);
 
-        var sendTimeout = setTimeout(function() {
-            // لو ما وصل رد بعد 10 ثواني — نخلي ⏳ (ما نعرض ❌)
-        }, 10000);
 
         var msgData = {
             from: myId,
@@ -943,14 +922,12 @@ function startChat(userId, userName, uLat, uLng) {
             text: text,
             t: firebase.database.ServerValue.TIMESTAMP
         }).then(function() {
-            clearTimeout(sendTimeout);
             var msgEl = document.getElementById(thisMsgId);
             if (msgEl) {
                 var tick = msgEl.querySelector('.msg-tick');
                 if (tick) tick.textContent = '✓';
             }
         }).catch(function() {
-            clearTimeout(sendTimeout);
         });
         // حفظ نسخة بالسجل بالخلفية
         db.ref('logs').push(msgData).catch(function() {});
@@ -1071,6 +1048,7 @@ function cleanup() {
     if (msgListener) { db.ref('msgs/' + myId).off(); msgListener = null; }
     if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
     if (gpsPollInterval) { clearInterval(gpsPollInterval); gpsPollInterval = null; }
+    _intervals.forEach(clearInterval); _intervals.length = 0;
     unreadFrom.clear();
     currentChatUser = null;
 }
