@@ -337,14 +337,30 @@ function startGpsPoll() {
     }
 
     function poll() {
-        // محاولة 1: دقة عالية (timeout 15 ثانية)
         navigator.geolocation.getCurrentPosition(onSuccess, function(err) {
             if (err.code === 3 && !myLat) {
                 // TIMEOUT → نحاول بدون دقة عالية
                 navigator.geolocation.getCurrentPosition(onSuccess, function() {},
                     { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 });
             }
-            if (err.code === 1 && !myLat) getLocationByIP();
+            if (err.code === 1) {
+                // مرفوض → نحاول IP + نرشد المستخدم
+                if (!myLat) getLocationByIP();
+                if (!window._gpsDeniedShown) {
+                    window._gpsDeniedShown = true;
+                    const isIOS = /iPhone|iPad/i.test(navigator.userAgent);
+                    showModal({
+                        title: '📍 المسافات غير دقيقة',
+                        message: isIOS
+                            ? 'لتحسين دقة المسافات:\n\nالإعدادات ← الخصوصية ← خدمات الموقع ← Safari ← أثناء الاستخدام\n\nثم حدّث الصفحة'
+                            : 'لتحسين دقة المسافات:\n\nاضغط 🔒 بجانب الرابط ← أذونات الموقع ← سماح\n\nثم حدّث الصفحة',
+                        buttons: [
+                            { text: 'حدّث الصفحة', cls: 'modal-btn-primary', action: function() { location.reload(); } },
+                            { text: 'تخطي', cls: 'modal-btn-cancel', action: function() {} }
+                        ]
+                    });
+                }
+            }
         }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     }
 
