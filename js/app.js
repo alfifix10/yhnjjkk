@@ -602,9 +602,16 @@ function enterPeopleScreen() {
             } else {
                 saveToHistory(msg.from, msg.text, false);
                 unreadFrom.add(msg.from);
-                if (currentScreen === 'people') {
-                    playNotif();
-                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                playNotif();
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                // تحديث شارة "رسالة جديدة" على كارد المرسل
+                var senderCard = document.querySelector('[data-uid="' + msg.from + '"]');
+                if (senderCard && !senderCard.classList.contains('has-unread')) {
+                    senderCard.classList.add('has-unread');
+                    var nameEl = senderCard.querySelector('.person-name');
+                    if (nameEl && !nameEl.querySelector('.new-msg-badge')) {
+                        nameEl.innerHTML += ' <span class="new-msg-badge">رسالة جديدة</span>';
+                    }
                 }
             }
             // نحذف فقط بعد النجاح
