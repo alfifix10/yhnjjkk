@@ -487,6 +487,15 @@ function enterPeopleScreen() {
         }, 500);
     }
 
+    // إخفاء spinner بعد 5 ثواني كحد أقصى
+    setTimeout(function() {
+        var spinner = document.getElementById('searchingSpinner');
+        if (spinner && spinner.style.display !== 'none') {
+            spinner.style.display = 'none';
+            document.getElementById('onlineCount').textContent = '✅ متصل';
+        }
+    }, 5000);
+
     // أول تحميل
     presenceRef.once('value', function(snap) {
         onlineCache = snap.val() || {};
