@@ -468,7 +468,11 @@ function enterPeopleScreen() {
 
     // [FIX 2] heartbeat واحد فقط
     heartbeatInterval = setInterval(() => {
-        if (myPresenceRef) myPresenceRef.update({ t: firebase.database.ServerValue.TIMESTAMP });
+        if (myPresenceRef) {
+            var hb = { t: firebase.database.ServerValue.TIMESTAMP };
+            if (myLat) { hb.lat = myLat; hb.lng = myLng; }
+            myPresenceRef.update(hb);
+        }
     }, 60000);
 
     // كاش محلي للمتصلين — نحدّث بذكاء بدون إعادة تحميل الكل
@@ -491,6 +495,17 @@ function enterPeopleScreen() {
             document.getElementById('onlineCount').textContent = '✅ متصل';
         }
     }, 5000);
+
+    // تنظيف كل البيانات القديمة من Firebase فوراً
+    presenceRef.once('value', function(snap) {
+        var data = snap.val() || {};
+        var now = Date.now();
+        Object.keys(data).forEach(function(id) {
+            if (id !== myId && data[id] && data[id].t && now - data[id].t > 60000) {
+                db.ref('online/' + id).remove();
+            }
+        });
+    });
 
     // أول تحميل
     presenceRef.once('value', function(snap) {
@@ -557,25 +572,24 @@ function enterPeopleScreen() {
         if (initialLoadDone) scheduleRender();
     });
     presenceRef.on('child_changed', function(snap) {
-        var oldData = onlineCache[snap.key];
+        var oldData = onlineCache[snap.key] || {};
         var newData = snap.val();
+        // نحتفظ بالإحداثيات القديمة لو الجديدة ما فيها
+        if (oldData.lat && !newData.lat) { newData.lat = oldData.lat; newData.lng = oldData.lng; }
         onlineCache[snap.key] = newData;
 
-        // تحديث المسافة بدون إعادة رسم القائمة بالكامل
         var card = document.querySelector('[data-uid="' + snap.key + '"]');
         if (card && newData) {
-            // تحديث المسافة
-            var distEl = card.querySelector('.person-distance');
-            if (distEl) distEl.textContent = formatDistance(newData.lat, newData.lng);
-            // تحديث الاسم لو تغيّر
-            if (oldData && oldData.name !== newData.name) {
+            // نحدّث المسافة بس لو فيه إحداثيات
+            if (newData.lat && newData.lng) {
+                var distEl = card.querySelector('.person-distance');
+                if (distEl) distEl.textContent = formatDistance(newData.lat, newData.lng);
+            }
+            if (oldData.name && newData.name && oldData.name !== newData.name) {
                 var nameEl = card.querySelector('.person-name');
                 if (nameEl) nameEl.textContent = newData.name;
                 card.dataset.uname = newData.name;
             }
-            // تحديث الإحداثيات في الـ data attributes
-            if (newData.lat) card.dataset.ulat = newData.lat;
-            if (newData.lng) card.dataset.ulng = newData.lng;
         }
     });
     presenceRef.on('child_removed', function(snap) {
