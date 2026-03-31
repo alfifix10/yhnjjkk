@@ -129,19 +129,15 @@ const GRADIENTS = [
 ];
 
 function formatDistance(lat, lng) {
-    if (typeof myLat !== 'number' || myLat === 0) return '🟢 متصل';
-    if (typeof lat !== 'number' || typeof lng !== 'number' || lat === 0) return '🟢 متصل';
+    if (!myLat || !lat || !lng) return '🟢 متصل';
     var dist = getDistance(lat, lng);
-    if (isNaN(dist) || dist === Infinity) return '🟢 متصل';
-    var meters = Math.round(dist * 1000);
-    if (meters < 10) return '🟢 بجانبك تقريباً';
-    if (meters < 100) return '🟢 ' + meters + ' متر';
-    if (meters < 1000) return '🟡 ' + meters + ' متر';
-    if (dist < 10) return '🟠 ' + dist.toFixed(1) + ' كم';
-    return '⚪ ' + Math.round(dist) + ' كم';
+    if (!dist || isNaN(dist) || dist === Infinity) return '🟢 متصل';
+    var m = Math.round(dist * 1000);
+    if (m < 10) return '🟢 بجانبك تقريباً';
+    if (m < 100) return '🟢 ' + m + ' متر';
+    if (m < 1000) return '🟡 ' + m + ' متر';
+    return '🟠 ' + dist.toFixed(1) + ' كم';
 }
-
-var myGpsReady = false; // يصبح true فقط لما الدقة < 100 متر
 
 function getAvatar(id) { return AVATARS[hashCode(id) % AVATARS.length]; }
 function getGradient(id) { return GRADIENTS[hashCode(id) % GRADIENTS.length]; }
@@ -272,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 navigator.geolocation.getCurrentPosition(function(pos) {
                     myLat = pos.coords.latitude;
                     myLng = pos.coords.longitude;
-                    myGpsReady = true;
                     enterPeopleScreen();
                 }, function() {
                     enterPeopleScreen();
@@ -332,7 +327,7 @@ function initLanding() {
     });
 }
 
-let geoWatchId = null;
+
 let enteredFromGeo = false;
 
 function requestLocation() {
@@ -354,10 +349,9 @@ function requestLocation() {
             myGpsAccuracy = accuracy;
             myLat = pos.coords.latitude;
             myLng = pos.coords.longitude;
-            myGpsReady = true;
             enteredFromGeo = true;
             enterPeopleScreen();
-            startGeoWatch();
+            startGpsPoll();
         },
         () => {
             // GPS مرفوض أو فشل — ادخل بدون موقع
@@ -368,50 +362,19 @@ function requestLocation() {
     );
 }
 
-function startGeoWatch() {
-    if (geoWatchId !== null) return;
-    if (!navigator.geolocation) return;
-    geoWatchId = navigator.geolocation.watchPosition(
-        function(pos) {
-            var newLat = pos.coords.latitude;
-            var newLng = pos.coords.longitude;
-            var accuracy = pos.coords.accuracy || 99999;
-            myGpsAccuracy = accuracy;
-
-            // نقبل الموقع فقط لو الدقة أقل من 200 متر (GPS حقيقي)
-            if (accuracy > myGpsAccuracy && myGpsAccuracy > 0) return;
-
-            // كشف قفزة مريبة
-            if (myLat !== 0 && myLng !== 0) {
-                var jump = getDistance(newLat, newLng);
-                if (jump > 50) return;
-            }
-
-            myLat = newLat;
-            myLng = newLng;
-            myGpsReady = true;
-
-            if (myPresenceRef) {
-                myPresenceRef.update({ lat: myLat, lng: myLng, acc: Math.round(accuracy) });
-            }
-            // تحديث كل المسافات بالقائمة بدون إعادة رسم
-            document.querySelectorAll('.person-card').forEach(function(card) {
-                var uid = card.dataset.uid;
-                var u = onlineCache[uid];
-                if (!u) return;
-                var distEl = card.querySelector('.person-distance');
-                if (distEl) distEl.textContent = formatDistance(u.lat, u.lng);
-            });
-
-            // لو وصلنا لدقة جيدة (< 100م) — نوقف GPS لتوفير البطارية
-            if (accuracy < 100 && geoWatchId !== null) {
-                navigator.geolocation.clearWatch(geoWatchId);
-                geoWatchId = null;
-            }
-        },
-        function() {},
-        { enableHighAccuracy: true, maximumAge: 0 }
-    );
+// polling GPS كل 10 ثواني — أوثق من watchPosition
+var gpsPollInterval = null;
+function startGpsPoll() {
+    if (gpsPollInterval || !navigator.geolocation) return;
+    function poll() {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            myLat = pos.coords.latitude;
+            myLng = pos.coords.longitude;
+            if (myPresenceRef) myPresenceRef.update({ lat: myLat, lng: myLng });
+        }, function() {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 });
+    }
+    poll();
+    gpsPollInterval = setInterval(poll, 10000);
 }
 
 // ========== SCREEN 2: People ==========
@@ -425,15 +388,12 @@ function enterPeopleScreen() {
     history.pushState({ screen: 'people' }, '', '');
 
     // تحديث الموقع بالخلفية
-    startGeoWatch();
+    startGpsPoll();
 
     // لو GPS ما جهز بعد 20 ثانية → نعرض الكل كـ fallback
     setTimeout(function() {
-        if (!myGpsReady && currentScreen === 'people') {
-            myGpsReady = true; // نقبل أي موقع متاح
-            if (presenceRef) {
-                presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
-            }
+        if (presenceRef) {
+            presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
         }
     }, 20000);
 
@@ -594,6 +554,21 @@ function enterPeopleScreen() {
         });
     }, 5000);
 
+    // تحديث المسافات كل 10 ثواني
+    setInterval(function() {
+        if (currentScreen !== 'people') return;
+        document.querySelectorAll('.person-card').forEach(function(card) {
+            var uid = card.dataset.uid;
+            var u = onlineCache[uid];
+            if (!u) return;
+            var distEl = card.querySelector('.person-distance');
+            if (distEl) {
+                var d = formatDistance(u.lat, u.lng);
+                if (distEl.textContent !== d) distEl.textContent = d;
+            }
+        });
+    }, 10000);
+
     // استمع للرسائل
     const myMsgsRef = db.ref('msgs/' + myId);
     msgListener = myMsgsRef.on('child_added', (snap) => {
@@ -689,11 +664,10 @@ function renderPeopleFromData(data) {
         var id = entry[0], u = entry[1];
         if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
             u.id = id;
-            // حساب المسافة لكل مستخدم
-            if (myGpsReady && u.lat && u.lng) {
+            if (myLat && u.lat && u.lng) {
                 u._dist = getDistance(u.lat, u.lng);
             } else {
-                u._dist = 99999; // بدون GPS → يروح آخر القائمة
+                u._dist = 99999;
             }
             allUsers.push(u);
         }
@@ -1037,7 +1011,7 @@ function cleanup() {
     if (presenceRef) { presenceRef.off(); presenceRef = null; }
     if (msgListener) { db.ref('msgs/' + myId).off(); msgListener = null; }
     if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
-    if (geoWatchId !== null) { navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
+    if (gpsPollInterval) { clearInterval(gpsPollInterval); gpsPollInterval = null; }
     unreadFrom.clear();
     currentChatUser = null;
 }
