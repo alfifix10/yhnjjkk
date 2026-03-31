@@ -719,7 +719,7 @@ function renderPeopleFromData(data) {
     var allUsers = [];
     Object.entries(data).forEach(function(entry) {
         var id = entry[0], u = entry[1];
-        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
+        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name && u.lat && u.lng) {
             u.id = id;
             if (myLat && u.lat && u.lng) {
                 u._dist = getDistance(u.lat, u.lng);
