@@ -264,18 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
         var savedName = localStorage.getItem('jeerani_name');
         if (savedName) {
             myName = savedName;
-            // نطلب GPS فوراً حتى لو الاسم محفوظ
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(pos) {
-                    myLat = pos.coords.latitude;
-                    myLng = pos.coords.longitude;
-                    enterPeopleScreen();
-                }, function() {
-                    enterPeopleScreen();
-                }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
-            } else {
-                enterPeopleScreen();
-            }
+            // ندخل فوراً — GPS يشتغل بالخلفية
+            enterPeopleScreen();
         } else {
             initLanding();
         }
@@ -332,35 +322,10 @@ function initLanding() {
 let enteredFromGeo = false;
 
 function requestLocation() {
-    const btn = document.getElementById('joinBtn');
+    var btn = document.getElementById('joinBtn');
     if (btn) { btn.textContent = '⏳ انتظر...'; btn.disabled = true; }
-
-    if (!navigator.geolocation) {
-        // المتصفح ما يدعم GPS — ادخل بدون موقع
-        enterPeopleScreen();
-        return;
-    }
-
-    enteredFromGeo = false;
-
-    // محاولة واحدة سريعة أولاً
-    navigator.geolocation.getCurrentPosition(
-        function(pos) {
-            var accuracy = pos.coords.accuracy || 99999;
-            myGpsAccuracy = accuracy;
-            myLat = pos.coords.latitude;
-            myLng = pos.coords.longitude;
-            enteredFromGeo = true;
-            enterPeopleScreen();
-            startGpsPoll();
-        },
-        () => {
-            // GPS مرفوض أو فشل — ادخل بدون موقع
-            enteredFromGeo = true;
-            enterPeopleScreen();
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+    // ندخل فوراً — GPS يشتغل بالخلفية عبر startGpsPoll
+    enterPeopleScreen();
 }
 
 // polling GPS كل 10 ثواني — أوثق من watchPosition
@@ -378,13 +343,13 @@ function startGpsPoll() {
             // أول ما نحصل GPS — نحدّث المسافات فوراً
             updateAllDistances();
         }, function(err) {
-            // DEBUG: عرض خطأ GPS
-            var nameEl = document.getElementById('myName');
-            if (nameEl && !myLat) {
-                var reason = err.code === 1 ? 'مرفوض' : err.code === 2 ? 'غير متاح' : 'انتهى الوقت';
-                nameEl.textContent = myName + ' ❌GPS: ' + reason;
+            var badge = document.getElementById('onlineCount');
+            if (badge && !myLat) {
+                if (err.code === 1) badge.textContent = '❌ فعّل الموقع من الإعدادات';
+                else if (err.code === 2) badge.textContent = '❌ خدمة الموقع غير متاحة';
+                else badge.textContent = '⏳ GPS بطيء...';
             }
-        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
     }
     // أول 30 ثانية: كل 3 ثواني (عنيف)
     poll();
