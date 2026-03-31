@@ -129,10 +129,9 @@ const GRADIENTS = [
 ];
 
 function formatDistance(lat, lng) {
-    if (!myLat) return '📍 GPS: انتظر...';
-    if (!lat || !lng) return '📍 الآخر: انتظر GPS';
+    if (!myLat || !lat || !lng) return '🟢 متصل';
     var dist = getDistance(lat, lng);
-    if (!dist || isNaN(dist) || dist === Infinity) return '⚠️ خطأ حساب';
+    if (!dist || isNaN(dist) || dist === Infinity) return '🟢 متصل';
     var m = Math.round(dist * 1000);
     if (m < 10) return '🟢 بجانبك تقريباً';
     if (m < 100) return '🟢 ' + m + ' متر';
@@ -337,17 +336,24 @@ function startGpsPoll() {
             myLat = pos.coords.latitude;
             myLng = pos.coords.longitude;
             if (myPresenceRef) myPresenceRef.update({ lat: myLat, lng: myLng });
-            // DEBUG: عرض حالة GPS
-            var nameEl = document.getElementById('myName');
-            if (nameEl) nameEl.textContent = myName + ' 📍✓';
+            // GPS نجح
             // أول ما نحصل GPS — نحدّث المسافات فوراً
             updateAllDistances();
         }, function(err) {
-            var badge = document.getElementById('onlineCount');
-            if (badge && !myLat) {
-                if (err.code === 1) badge.textContent = '❌ فعّل الموقع من الإعدادات';
-                else if (err.code === 2) badge.textContent = '❌ خدمة الموقع غير متاحة';
-                else badge.textContent = '⏳ GPS بطيء...';
+            if (!myLat && err.code === 1 && !window._gpsModalShown) {
+                window._gpsModalShown = true;
+                var isIOS = /iPhone|iPad/i.test(navigator.userAgent);
+                var steps = isIOS
+                    ? 'الإعدادات ← Safari ← الموقع ← اسمح\nثم ارجع وحدّث الصفحة'
+                    : 'اضغط على 🔒 بجانب الرابط\nاختر "أذونات الموقع" ← سماح\nثم حدّث الصفحة';
+                showModal({
+                    title: '📍 فعّل تحديد الموقع',
+                    message: 'عشان تشوف المسافة بينك وبين جيرانك، فعّل الموقع:\n\n' + steps,
+                    buttons: [
+                        { text: 'حدّث الصفحة', cls: 'modal-btn-primary', action: function() { location.reload(); } },
+                        { text: 'لاحقاً', cls: 'modal-btn-cancel', action: function() {} }
+                    ]
+                });
             }
         }, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
     }
