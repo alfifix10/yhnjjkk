@@ -439,12 +439,13 @@ function enterPeopleScreen() {
     // تحديث الموقع بالخلفية
     startGpsPoll();
 
-    // لو GPS ما جهز بعد 20 ثانية → نعرض الكل كـ fallback
+    // لو GPS ما جهز بعد 15 ثانية → نعرض الكل بدون فلتر GPS
     setTimeout(function() {
-        if (presenceRef) {
+        if (!myLat && presenceRef) {
+            window._skipGpsFilter = true;
             presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
         }
-    }, 20000);
+    }, 15000);
 
     presenceRef = db.ref('online');
     myPresenceRef = presenceRef.child(myId);
@@ -551,7 +552,7 @@ function enterPeopleScreen() {
                 });
                 if (cleaned) renderPeopleFromData(onlineCache);
             });
-        }, 30000));
+        }, 10000));
 
         // تنظيف السجل — مرة واحدة
         if (!window._logsCleanedUp) {
@@ -640,9 +641,10 @@ function enterPeopleScreen() {
     }, 5000));
 
 
-    // استمع للرسائل
+    // استمع للرسائل — نوقف أي listener قديم أولاً
+    db.ref('msgs/' + myId).off();
     const myMsgsRef = db.ref('msgs/' + myId);
-    msgListener = myMsgsRef.on('child_added', (snap) => {
+    myMsgsRef.on('child_added', (snap) => {
         const msg = snap.val();
         if (!msg) return;
 
@@ -733,7 +735,7 @@ function renderPeopleFromData(data) {
     var allUsers = [];
     Object.entries(data).forEach(function(entry) {
         var id = entry[0], u = entry[1];
-        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name && u.lat && u.lng) {
+        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name && (window._skipGpsFilter || (u.lat && u.lng))) {
             u.id = id;
             if (myLat && u.lat && u.lng) {
                 u._dist = getDistance(u.lat, u.lng);
@@ -1075,7 +1077,7 @@ function cleanup() {
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
     if (myPresenceRef) { myPresenceRef.remove(); myPresenceRef = null; }
     if (presenceRef) { presenceRef.off(); presenceRef = null; }
-    if (msgListener) { db.ref('msgs/' + myId).off(); msgListener = null; }
+    db.ref('msgs/' + myId).off();
     if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
     if (gpsPollInterval) { clearInterval(gpsPollInterval); gpsPollInterval = null; }
     _intervals.forEach(clearInterval); _intervals.length = 0;
