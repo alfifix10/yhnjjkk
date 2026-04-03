@@ -1,6 +1,9 @@
 // ========================================
-// Jeerani — Jeerani
+// Jeerani — دردش مع جيرانك
+// Anonymous proximity chat
 // ========================================
+
+'use strict';
 
 const firebaseConfig = {
     apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
@@ -16,7 +19,7 @@ let db;
 
 // بصمة الجهاز — ثابتة حتى لو مسح localStorage أو فتح incognito
 function getDeviceFingerprint() {
-    var parts = [
+    let parts = [
         navigator.userAgent,
         navigator.language,
         screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
@@ -26,16 +29,16 @@ function getDeviceFingerprint() {
     ];
     // Canvas fingerprint
     try {
-        var c = document.createElement('canvas');
-        var ctx = c.getContext('2d');
+        let c = document.createElement('canvas');
+        let ctx = c.getContext('2d');
         ctx.textBaseline = 'top';
         ctx.font = '14px Arial';
         ctx.fillText('jeerani-fp', 2, 2);
         parts.push(c.toDataURL().slice(-50));
     } catch(e) {}
     // Hash
-    var str = parts.join('|');
-    var hash = 0;
+    let str = parts.join('|');
+    let hash = 0;
     for (var i = 0; i < str.length; i++) {
         hash = ((hash << 5) - hash) + str.charCodeAt(i);
         hash = hash & hash;
@@ -51,13 +54,13 @@ function generateId() {
 // استرجاع الهوية: localStorage أولاً، ثم بصمة الجهاز، ثم إنشاء جديد
 function getOrCreateId() {
     try {
-        var stored = localStorage.getItem('jeerani_id');
+        let stored = localStorage.getItem('jeerani_id');
         if (stored) return stored;
     } catch(e) {}
 
     // لو مسح localStorage، نحاول نسترجع من cookie
     try {
-        var cookieMatch = document.cookie.match(/jeerani_id=([^;]+)/);
+        let cookieMatch = document.cookie.match(/jeerani_id=([^;]+)/);
         if (cookieMatch) {
             try { localStorage.setItem('jeerani_id', cookieMatch[1]); } catch(e) {}
             return cookieMatch[1];
@@ -65,8 +68,8 @@ function getOrCreateId() {
     } catch(e) {}
 
     // هوية جديدة مبنية على بصمة الجهاز
-    var fp = getDeviceFingerprint();
-    var id = fp + '-' + generateId().slice(0, 8);
+    let fp = getDeviceFingerprint();
+    let id = fp + '-' + generateId().slice(0, 8);
     try { localStorage.setItem('jeerani_id', id); } catch(e) {}
     try { document.cookie = 'jeerani_id=' + id + ';max-age=31536000;path=/;SameSite=Lax'; } catch(e) {}
     return id;
@@ -89,9 +92,9 @@ let chatHistory = loadChatHistory();
 
 function loadChatHistory() {
     try {
-        var saved = localStorage.getItem('jeerani_history');
+        let saved = localStorage.getItem('jeerani_history');
         if (saved) {
-            var parsed = JSON.parse(saved);
+            let parsed = JSON.parse(saved);
             if (Array.isArray(parsed)) return new Map(parsed);
         }
     } catch(e) {
@@ -102,13 +105,12 @@ function loadChatHistory() {
 
 function persistChatHistory() {
     try {
-        var arr = [...chatHistory.entries()].slice(-20);
+        let arr = [...chatHistory.entries()].slice(-20);
         localStorage.setItem('jeerani_history', JSON.stringify(arr));
     } catch(e) {}
 }
 let presenceRef = null;
 let myPresenceRef = null;
-let msgListener = null;
 let partnerPresenceRef = null;
 let currentScreen = 'landing';
 let heartbeatInterval = null;
@@ -130,9 +132,9 @@ const GRADIENTS = [
 
 function formatDistance(lat, lng) {
     if (!myLat || !lat || !lng) return '';
-    var dist = getDistance(lat, lng);
+    let dist = getDistance(lat, lng);
     if (!dist || isNaN(dist) || dist === Infinity) return '';
-    var m = Math.round(dist * 1000);
+    let m = Math.round(dist * 1000);
     if (m < 10) return '🟢 بجانبك تقريباً';
     if (m < 100) return '🟢 ' + m + ' متر';
     if (m < 1000) return '🟡 ' + m + ' متر';
@@ -150,6 +152,14 @@ function hashCode(str) {
 // تقريب الإحداثيات — 3 خانات عشرية = دقة ~100 متر (حماية الخصوصية)
 
 const MAX_HISTORY_PER_USER = 100;
+const GPS_FAST_INTERVAL = 3000;
+const GPS_SLOW_INTERVAL = 15000;
+const GPS_FAST_DURATION = 30000;
+const GPS_TIMEOUT = 15000;
+const STALE_USER_MS = 60000;
+const STALE_CHECK_MS = 10000;
+const HEARTBEAT_MS = 60000;
+const DISTANCE_REFRESH_MS = 5000;
 
 let _audioCtx = null;
 function getAudioContext() {
@@ -257,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
 
-        var savedName = localStorage.getItem('jeerani_name');
+        let savedName = localStorage.getItem('jeerani_name');
         if (savedName) {
             myName = savedName;
             // نحاول نحصل الموقع من IP فوراً (سريع وما يحتاج إذن)
@@ -289,14 +299,14 @@ function initLanding() {
     showScreen('landingScreen');
     const input = document.getElementById('nicknameInput');
     const joinBtn = document.getElementById('joinBtn');
-    var savedName = localStorage.getItem('jeerani_name');
+    let savedName = localStorage.getItem('jeerani_name');
     input.value = savedName || '';
     joinBtn.disabled = false;
     joinBtn.textContent = 'ادخل';
     setTimeout(function() { input.focus(); }, 300);
 
     joinBtn.onclick = () => {
-        var name = input.value.trim();
+        let name = input.value.trim();
         if (name.length < 1) {
             input.style.borderColor = '#fd79a8';
             input.focus();
@@ -318,7 +328,7 @@ function initLanding() {
 
 
 function requestLocation() {
-    var btn = document.getElementById('joinBtn');
+    let btn = document.getElementById('joinBtn');
     if (btn) { btn.textContent = '⏳ انتظر...'; btn.disabled = true; }
     // ندخل فوراً — GPS يشتغل بالخلفية عبر startGpsPoll
     enterPeopleScreen();
@@ -333,7 +343,7 @@ function startGpsPoll() {
         myLat = pos.coords.latitude;
         myLng = pos.coords.longitude;
         if (myPresenceRef) myPresenceRef.update({ lat: myLat, lng: myLng });
-        var badge = document.getElementById('onlineCount');
+        let badge = document.getElementById('onlineCount');
         if (badge) badge.textContent = '✅ متصل';
         updateAllDistances();
     }
@@ -363,22 +373,22 @@ function startGpsPoll() {
                     });
                 }
             }
-        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: GPS_TIMEOUT });
     }
 
     poll();
-    var fastPoll = setInterval(poll, 3000);
+    let fastPoll = setInterval(poll, GPS_FAST_INTERVAL);
     setTimeout(function() {
         clearInterval(fastPoll);
-        gpsPollInterval = setInterval(poll, 15000);
-    }, 30000);
+        gpsPollInterval = setInterval(poll, GPS_SLOW_INTERVAL);
+    }, GPS_FAST_DURATION);
 }
 
 function cleanStaleUsers(cache) {
-    var now = Date.now();
+    let now = Date.now();
     Object.keys(cache).forEach(function(id) {
-        var u = cache[id];
-        if (u && u.t && now - u.t > 60000 && id !== myId) {
+        let u = cache[id];
+        if (u && u.t && now - u.t > STALE_USER_MS && id !== myId) {
             db.ref('online/' + id).remove();
             delete cache[id];
         }
@@ -415,12 +425,12 @@ function getLocationByIP() {
 
 function updateAllDistances() {
     document.querySelectorAll('.person-card').forEach(function(card) {
-        var uid = card.dataset.uid;
-        var u = window._onlineCache ? window._onlineCache[uid] : null;
+        let uid = card.dataset.uid;
+        let u = window._onlineCache ? window._onlineCache[uid] : null;
         if (!u) return;
-        var distEl = card.querySelector('.person-distance');
+        let distEl = card.querySelector('.person-distance');
         if (distEl) {
-            var d = formatDistance(u.lat, u.lng);
+            let d = formatDistance(u.lat, u.lng);
             if (distEl.textContent !== d) distEl.textContent = d;
         }
     });
@@ -456,14 +466,14 @@ function enterPeopleScreen() {
     });
 
     // مراقبة اتصال Firebase — يظهر البانر فقط لو انقطع بعد ما كان متصل
-    var wasConnected = false;
+    let wasConnected = false;
     db.ref('.info/connected').on('value', function(snap) {
-        var banner = document.getElementById('offlineBanner');
+        let banner = document.getElementById('offlineBanner');
         if (snap.val() === true) {
             if (wasConnected) {
                 // عاد الاتصال — نعيد تسجيل الحضور
                 if (myPresenceRef) {
-                    var presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
+                    let presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
                     if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
                     myPresenceRef.set(presenceData);
                 }
@@ -476,7 +486,7 @@ function enterPeopleScreen() {
         }
     });
 
-    var presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
+    let presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
     if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
     myPresenceRef.set(presenceData);
     myPresenceRef.onDisconnect().remove();
@@ -484,11 +494,11 @@ function enterPeopleScreen() {
     // [FIX 2] heartbeat واحد فقط
     heartbeatInterval = setInterval(() => {
         if (myPresenceRef) {
-            var hb = { t: firebase.database.ServerValue.TIMESTAMP };
+            let hb = { t: firebase.database.ServerValue.TIMESTAMP };
             if (myLat) { hb.lat = myLat; hb.lng = myLng; }
             myPresenceRef.update(hb);
         }
-    }, 60000);
+    }, HEARTBEAT_MS);
 
     // كاش محلي للمتصلين — نحدّث بذكاء بدون إعادة تحميل الكل
     let onlineCache = {};
@@ -504,7 +514,7 @@ function enterPeopleScreen() {
 
     // إخفاء spinner بعد 5 ثواني كحد أقصى
     setTimeout(function() {
-        var spinner = document.getElementById('searchingSpinner');
+        let spinner = document.getElementById('searchingSpinner');
         if (spinner && spinner.style.display !== 'none') {
             spinner.style.display = 'none';
             if (myLat) {
@@ -517,10 +527,10 @@ function enterPeopleScreen() {
 
     // تنظيف كل البيانات القديمة من Firebase فوراً
     presenceRef.once('value', function(snap) {
-        var data = snap.val() || {};
-        var now = Date.now();
+        let data = snap.val() || {};
+        let now = Date.now();
         Object.keys(data).forEach(function(id) {
-            if (id !== myId && data[id] && data[id].t && now - data[id].t > 60000) {
+            if (id !== myId && data[id] && data[id].t && now - data[id].t > STALE_USER_MS) {
                 db.ref('online/' + id).remove();
             }
         });
@@ -529,7 +539,7 @@ function enterPeopleScreen() {
     // أول تحميل
     presenceRef.once('value', function(snap) {
         onlineCache = snap.val() || {};
-        var spinner = document.getElementById('searchingSpinner');
+        let spinner = document.getElementById('searchingSpinner');
         if (spinner) spinner.style.display = 'none';
         document.getElementById('onlineCount').textContent = '✅ متصل';
 
@@ -540,11 +550,11 @@ function enterPeopleScreen() {
         // تنظيف دوري كل 30 ثانية
         _intervals.push(setInterval(function() {
             presenceRef.once('value', function(snap) {
-                var data = snap.val() || {};
-                var cleaned = false;
-                var now = Date.now();
+                let data = snap.val() || {};
+                let cleaned = false;
+                let now = Date.now();
                 Object.keys(data).forEach(function(id) {
-                    if (id !== myId && data[id] && data[id].t && now - data[id].t > 60000) {
+                    if (id !== myId && data[id] && data[id].t && now - data[id].t > STALE_USER_MS) {
                         db.ref('online/' + id).remove();
                         delete onlineCache[id];
                         cleaned = true;
@@ -552,22 +562,22 @@ function enterPeopleScreen() {
                 });
                 if (cleaned) renderPeopleFromData(onlineCache);
             });
-        }, 10000));
+        }, STALE_CHECK_MS));
 
         // تنظيف السجل — مرة واحدة
         if (!window._logsCleanedUp) {
             window._logsCleanedUp = true;
             db.ref('logs').once('value', function(s) {
-                var logData = s.val() || {};
-                var convs = {};
+                let logData = s.val() || {};
+                let convs = {};
                 Object.entries(logData).forEach(function(e) {
-                    var key = e[0], m = e[1];
+                    let key = e[0], m = e[1];
                     if (!m.from || !m.to) return;
-                    var pair = [m.from, m.to].sort().join('_');
+                    let pair = [m.from, m.to].sort().join('_');
                     if (!convs[pair]) convs[pair] = [];
                     convs[pair].push({ key: key, t: m.t || 0 });
                 });
-                var monthAgo = now - (30 * 24 * 60 * 60 * 1000);
+                let monthAgo = now - (30 * 24 * 60 * 60 * 1000);
                 Object.values(convs).forEach(function(msgs) {
                     msgs.sort(function(a, b) { return b.t - a.t; });
                     if (now - (msgs[0] ? msgs[0].t : 0) > monthAgo) {
@@ -581,7 +591,7 @@ function enterPeopleScreen() {
     });
 
     // بعد أول تحميل، نستمع للتغييرات الجديدة فقط
-    var initialLoadDone = false;
+    let initialLoadDone = false;
     setTimeout(function() { initialLoadDone = true; }, 2000);
 
     presenceRef.on('child_added', function(snap) {
@@ -591,8 +601,8 @@ function enterPeopleScreen() {
         if (initialLoadDone) scheduleRender();
     });
     presenceRef.on('child_changed', function(snap) {
-        var oldData = onlineCache[snap.key] || {};
-        var newData = snap.val();
+        let oldData = onlineCache[snap.key] || {};
+        let newData = snap.val();
         // نحتفظ بالإحداثيات القديمة لو الجديدة ما فيها
         if (oldData && oldData.lat && !newData.lat) { newData.lat = oldData.lat; newData.lng = oldData.lng; }
         let hadCoords = oldData && oldData.lat;
@@ -605,15 +615,15 @@ function enterPeopleScreen() {
             return;
         }
 
-        var card = document.querySelector('[data-uid="' + snap.key + '"]');
+        let card = document.querySelector('[data-uid="' + snap.key + '"]');
         if (card && newData) {
             // نحدّث المسافة بس لو فيه إحداثيات
             if (newData.lat && newData.lng) {
-                var distEl = card.querySelector('.person-distance');
+                let distEl = card.querySelector('.person-distance');
                 if (distEl) distEl.textContent = formatDistance(newData.lat, newData.lng);
             }
             if (oldData.name && newData.name && oldData.name !== newData.name) {
-                var nameEl = card.querySelector('.person-name');
+                let nameEl = card.querySelector('.person-name');
                 if (nameEl) nameEl.textContent = newData.name;
                 card.dataset.uname = newData.name;
             }
@@ -628,17 +638,17 @@ function enterPeopleScreen() {
     _intervals.push(setInterval(function() {
         if (currentScreen !== 'people') return;
         document.querySelectorAll('.person-card').forEach(function(card) {
-            var uid = card.dataset.uid;
-            var u = onlineCache[uid];
+            let uid = card.dataset.uid;
+            let u = onlineCache[uid];
             if (u) {
-                var distEl = card.querySelector('.person-distance');
+                let distEl = card.querySelector('.person-distance');
                 if (distEl) {
-                    var newDist = formatDistance(u.lat, u.lng);
+                    let newDist = formatDistance(u.lat, u.lng);
                     if (distEl.textContent !== newDist) distEl.textContent = newDist;
                 }
             }
         });
-    }, 5000));
+    }, DISTANCE_REFRESH_MS));
 
 
     // استمع للرسائل — نوقف أي listener قديم أولاً
@@ -662,10 +672,10 @@ function enterPeopleScreen() {
                 playNotif();
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 // تحديث شارة "رسالة جديدة" على كارد المرسل
-                var senderCard = document.querySelector('[data-uid="' + msg.from + '"]');
+                let senderCard = document.querySelector('[data-uid="' + msg.from + '"]');
                 if (senderCard && !senderCard.classList.contains('has-unread')) {
                     senderCard.classList.add('has-unread');
-                    var nameEl = senderCard.querySelector('.person-name');
+                    let nameEl = senderCard.querySelector('.person-name');
                     if (nameEl && !nameEl.querySelector('.new-msg-badge')) {
                         nameEl.innerHTML += ' <span class="new-msg-badge">رسالة جديدة</span>';
                     }
@@ -703,7 +713,7 @@ function enterPeopleScreen() {
     };
 
     // زر إلغاء الحظر
-    var unblockBtn = document.getElementById('unblockBtn');
+    let unblockBtn = document.getElementById('unblockBtn');
     if (blockedUsers.size > 0) {
         unblockBtn.style.display = 'inline-flex';
         unblockBtn.textContent = '🔓 إلغاء الحظر (' + blockedUsers.size + ')';
@@ -728,13 +738,13 @@ function enterPeopleScreen() {
 }
 
 function renderPeopleFromData(data) {
-    var list = document.getElementById('peopleList');
-    var noPeople = document.getElementById('noPeople');
-    var count = document.getElementById('onlineCount');
+    let list = document.getElementById('peopleList');
+    let noPeople = document.getElementById('noPeople');
+    let count = document.getElementById('onlineCount');
 
-    var allUsers = [];
+    let allUsers = [];
     Object.entries(data).forEach(function(entry) {
-        var id = entry[0], u = entry[1];
+        let id = entry[0], u = entry[1];
         if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name && (window._skipGpsFilter || (u.lat && u.lng))) {
             u.id = id;
             if (myLat && u.lat && u.lng) {
@@ -752,11 +762,11 @@ function renderPeopleFromData(data) {
     // النظام الذكي التدريجي:
     // معادلة سلسة: كل ما زاد مستخدم، ينقص العدد المعروض بشكل تدريجي
     // maxShow = 20 عند 1 مستخدم، ينزل تدريجياً لـ 8 عند 200+ مستخدم
-    var total = allUsers.length;
-    var maxShow = Math.max(8, Math.round(20 - (total * 0.06)));
+    let total = allUsers.length;
+    let maxShow = Math.max(8, Math.round(20 - (total * 0.06)));
     if (total <= 5) maxShow = total;
 
-    var users;
+    let users;
     users = allUsers.slice(0, maxShow);
 
     if (users.length === 0) {
@@ -772,8 +782,8 @@ function renderPeopleFromData(data) {
     noPeople.style.display = 'none';
 
     list.innerHTML = users.map((u, i) => {
-        var distText = formatDistance(u.lat, u.lng);
-        var hasUnread = unreadFrom.has(u.id);
+        let distText = formatDistance(u.lat, u.lng);
+        let hasUnread = unreadFrom.has(u.id);
         return `
             <div class="person-card ${hasUnread ? 'has-unread' : ''}" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat || ''}" data-ulng="${u.lng || ''}">
                 <div class="person-avatar" style="background:${getGradient(u.id)}">
@@ -808,9 +818,9 @@ function startChat(userId, userName, uLat, uLng) {
     document.getElementById('chatWith').textContent = userName;
     document.getElementById('chatDistance').textContent = formatDistance(uLat, uLng);
 
-    var msgsDiv = document.getElementById('chatMessages');
+    let msgsDiv = document.getElementById('chatMessages');
     msgsDiv.innerHTML = '';
-    var scrollBtn = document.getElementById('scrollDownBtn');
+    let scrollBtn = document.getElementById('scrollDownBtn');
     if (scrollBtn) scrollBtn.style.display = 'none';
     msgsDiv.onscroll = function() {
         if (msgsDiv.scrollHeight - msgsDiv.scrollTop - msgsDiv.clientHeight < 80) {
@@ -829,13 +839,13 @@ function startChat(userId, userName, uLat, uLng) {
     if (partnerPresenceRef) partnerPresenceRef.off();
     partnerPresenceRef = db.ref('online/' + userId);
     partnerPresenceRef.on('value', (snap) => {
-        var statusEl = document.getElementById('chatDistance');
-        var nameEl = document.getElementById('chatWith');
+        let statusEl = document.getElementById('chatDistance');
+        let nameEl = document.getElementById('chatWith');
         if (snap.exists()) {
-            var data = snap.val();
+            let data = snap.val();
             // تحديث الاسم إذا تغيّر
             if (data.name && data.name !== nameEl.textContent) {
-                var oldName = nameEl.textContent;
+                let oldName = nameEl.textContent;
                 nameEl.textContent = data.name;
                 currentChatUser.name = data.name;
                 addSystemMsg('غيّر اسمه إلى: ' + data.name);
@@ -869,9 +879,9 @@ function startChat(userId, userName, uLat, uLng) {
     };
 
     // مؤشر "يكتب..."
-    var myTypingRef = db.ref('typing/' + userId + '/' + myId);
-    var partnerTypingRef2 = db.ref('typing/' + myId + '/' + userId);
-    var typingIndicator = document.getElementById('typingIndicator');
+    let myTypingRef = db.ref('typing/' + userId + '/' + myId);
+    let partnerTypingRef2 = db.ref('typing/' + myId + '/' + userId);
+    let typingIndicator = document.getElementById('typingIndicator');
     myTypingRef.onDisconnect().remove();
 
     partnerTypingRef2.on('value', function(snap) {
@@ -905,10 +915,10 @@ function startChat(userId, userName, uLat, uLng) {
     const sendBtn = document.getElementById('sendBtn');
 
     const sendMsg = () => {
-        var el = document.getElementById('msgInput');
-        var text = el.value.trim();
+        let el = document.getElementById('msgInput');
+        let text = el.value.trim();
         if (!text || text.length > 500) return;
-        var now = Date.now();
+        let now = Date.now();
         // حد 500ms بين كل رسالة
         if (now - lastMsgTime < 500) {
             sendBtn.style.opacity = '0.5';
@@ -938,7 +948,7 @@ function startChat(userId, userName, uLat, uLng) {
         clearTimeout(typingTimeout);
 
 
-        var msgData = {
+        let msgData = {
             from: myId,
             fromName: myName,
             to: userId,
@@ -954,9 +964,9 @@ function startChat(userId, userName, uLat, uLng) {
             text: text,
             t: firebase.database.ServerValue.TIMESTAMP
         }).then(function() {
-            var msgEl = document.getElementById(thisMsgId);
+            let msgEl = document.getElementById(thisMsgId);
             if (msgEl) {
-                var tick = msgEl.querySelector('.msg-tick');
+                let tick = msgEl.querySelector('.msg-tick');
                 if (tick) tick.textContent = '✓';
             }
         }).catch(function() {
@@ -974,23 +984,23 @@ function startChat(userId, userName, uLat, uLng) {
 
 function saveToHistory(userId, text, isMe) {
     if (!chatHistory.has(userId)) chatHistory.set(userId, []);
-    var h = chatHistory.get(userId);
+    let h = chatHistory.get(userId);
     h.push({ text, isMe });
     if (h.length > MAX_HISTORY_PER_USER) h.shift();
     persistChatHistory();
 }
 function addMsg(text, isMe, delivered = true, msgId = null) {
-    var msgs = document.getElementById('chatMessages');
-    var div = document.createElement('div');
+    let msgs = document.getElementById('chatMessages');
+    let div = document.createElement('div');
     if (msgId) div.id = msgId;
-    var now = new Date();
-    var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    let now = new Date();
+    let time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
     div.className = 'msg ' + (isMe ? 'msg-me' : 'msg-them');
-    var tick = isMe ? '<span class="msg-tick">' + (delivered ? '✓' : '⏳') + '</span>' : '';
+    let tick = isMe ? '<span class="msg-tick">' + (delivered ? '✓' : '⏳') + '</span>' : '';
     div.innerHTML = esc(text) + '<span class="msg-time">' + time + ' ' + tick + '</span>';
 
     // لا تسحب للأسفل إذا المستخدم يقرأ رسائل قديمة
-    var isAtBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 80;
+    let isAtBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 80;
     msgs.appendChild(div);
     if (isAtBottom || isMe) {
         msgs.scrollTop = msgs.scrollHeight;
@@ -1000,7 +1010,7 @@ function addMsg(text, isMe, delivered = true, msgId = null) {
 }
 
 function showNewMsgButton() {
-    var btn = document.getElementById('scrollDownBtn');
+    let btn = document.getElementById('scrollDownBtn');
     if (btn) btn.style.display = 'flex';
 }
 
