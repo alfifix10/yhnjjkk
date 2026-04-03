@@ -770,6 +770,7 @@ function renderPeopleFromData(data) {
             u.id = id;
             if (myLat && u.lat && u.lng) {
                 u._dist = getDistance(u.lat, u.lng);
+                if (u._dist > 100) return; // أبعد من 100 كم = مو جارك
             } else {
                 u._dist = 99999;
             }
