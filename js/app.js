@@ -18,6 +18,7 @@ const firebaseConfig = {
 let db;
 
 // بصمة الجهاز — ثابتة حتى لو مسح localStorage أو فتح incognito
+/** إنشاء بصمة فريدة للجهاز باستخدام Canvas + معلومات المتصفح */
 function getDeviceFingerprint() {
     let parts = [
         navigator.userAgent,
@@ -46,12 +47,14 @@ function getDeviceFingerprint() {
     return 'fp-' + Math.abs(hash).toString(36);
 }
 
+/** إنشاء معرّف فريد — يستخدم crypto.randomUUID أو fallback */
 function generateId() {
     if (crypto && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxx-xxxx-xxxx'.replace(/x/g, function() { return Math.floor(Math.random() * 16).toString(16); });
 }
 
 // استرجاع الهوية: localStorage أولاً، ثم بصمة الجهاز، ثم إنشاء جديد
+/** استرجاع هوية المستخدم من localStorage/cookie أو إنشاء جديدة */
 function getOrCreateId() {
     try {
         let stored = localStorage.getItem('jeerani_id');
@@ -90,6 +93,7 @@ let msgsSentInMinute = 0;
 let minuteStart = Date.now();
 let chatHistory = loadChatHistory();
 
+/** تحميل سجل المحادثات من localStorage */
 function loadChatHistory() {
     try {
         let saved = localStorage.getItem('jeerani_history');
@@ -103,6 +107,7 @@ function loadChatHistory() {
     return new Map();
 }
 
+/** حفظ سجل المحادثات في localStorage (آخر 20 محادثة) */
 function persistChatHistory() {
     try {
         let arr = [...chatHistory.entries()].slice(-20);
@@ -130,6 +135,7 @@ const GRADIENTS = [
     'linear-gradient(135deg, #a29bfe, #fd79a8)',
 ];
 
+/** حساب وتنسيق المسافة بين المستخدم الحالي والإحداثيات المعطاة */
 function formatDistance(lat, lng) {
     if (!myLat || !lat || !lng) return '';
     let dist = getDistance(lat, lng);
@@ -141,8 +147,11 @@ function formatDistance(lat, lng) {
     return '🟠 ' + dist.toFixed(1) + ' كم';
 }
 
+/** اختيار إيموجي أفاتار بناءً على hash الـ ID */
 function getAvatar(id) { return AVATARS[hashCode(id) % AVATARS.length]; }
+/** اختيار تدرج لوني بناءً على hash الـ ID */
 function getGradient(id) { return GRADIENTS[hashCode(id) % GRADIENTS.length]; }
+/** حساب hash رقمي لنص — يُستخدم لتوزيع الأفاتارات والألوان */
 function hashCode(str) {
     let h = 0;
     for (let i = 0; i < str.length; i++) h = ((h << 5) - h) + str.charCodeAt(i);
@@ -162,6 +171,7 @@ const HEARTBEAT_MS = 60000;
 const DISTANCE_REFRESH_MS = 5000;
 
 let _audioCtx = null;
+/** إنشاء أو إعادة استخدام AudioContext واحد لتشغيل الأصوات */
 function getAudioContext() {
     if (!_audioCtx || _audioCtx.state === 'closed') {
         _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -170,6 +180,7 @@ function getAudioContext() {
     return _audioCtx;
 }
 
+/** تشغيل صوت إشعار (نغمة مزدوجة شبيهة بسناب شات) */
 function playNotif() {
     try {
         const ctx = getAudioContext();
@@ -200,6 +211,7 @@ function playNotif() {
     } catch (e) {}
 }
 
+/** عرض نافذة modal مع عنوان ورسالة وأزرار — بديل prompt/confirm */
 function showModal(opts) {
     const overlay = document.getElementById('modalOverlay');
     const titleEl = document.getElementById('modalTitle');
@@ -281,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+/** إنشاء جزيئات متحركة في الخلفية للتأثير البصري */
 function initParticles() {
     const c = document.getElementById('particles');
     const colors = ['#6c5ce7','#00cec9','#fd79a8','#a29bfe'];
@@ -294,6 +307,7 @@ function initParticles() {
 }
 
 // ========== SCREEN 1: Landing ==========
+/** تهيئة شاشة الدخول — حقل الاسم وأزرار الأسماء السريعة */
 function initLanding() {
     currentScreen = 'landing';
     showScreen('landingScreen');
@@ -327,6 +341,7 @@ function initLanding() {
 
 
 
+/** طلب إذن الموقع والدخول لصفحة الجيران */
 function requestLocation() {
     let btn = document.getElementById('joinBtn');
     if (btn) { btn.textContent = '⏳ انتظر...'; btn.disabled = true; }
@@ -336,6 +351,7 @@ function requestLocation() {
 
 // polling GPS كل 10 ثواني — أوثق من watchPosition
 let gpsPollInterval = null;
+/** بدء polling GPS — سريع أول 30 ثانية ثم كل 15 ثانية مع fallback */
 function startGpsPoll() {
     if (gpsPollInterval || !navigator.geolocation) return;
 
@@ -384,6 +400,7 @@ function startGpsPoll() {
     }, GPS_FAST_DURATION);
 }
 
+/** حذف المستخدمين غير النشطين (أكثر من دقيقة) من Firebase */
 function cleanStaleUsers(cache) {
     let now = Date.now();
     Object.keys(cache).forEach(function(id) {
@@ -396,6 +413,7 @@ function cleanStaleUsers(cache) {
 }
 
 // خطة بديلة: لو GPS مرفوض — نحصل الموقع من IP (بدون إذن!)
+/** الحصول على الموقع التقريبي من IP كـ fallback لـ GPS */
 function getLocationByIP() {
     if (myLat) return; // GPS شغّال — ما نحتاج
     fetch('https://ipapi.co/json/')
@@ -423,6 +441,7 @@ function getLocationByIP() {
         });
 }
 
+/** تحديث نص المسافة لكل المستخدمين المعروضين بالقائمة */
 function updateAllDistances() {
     document.querySelectorAll('.person-card').forEach(function(card) {
         let uid = card.dataset.uid;
@@ -437,6 +456,7 @@ function updateAllDistances() {
 }
 
 // ========== SCREEN 2: People ==========
+/** تهيئة شاشة الجيران — Firebase listeners + GPS + عرض القائمة */
 function enterPeopleScreen() {
     cleanup();
 
@@ -737,6 +757,7 @@ function enterPeopleScreen() {
     document.getElementById('shareBtn')?.addEventListener('click', shareLink);
 }
 
+/** رسم قائمة الجيران — فلترة وترتيب وعرض بطاقات المستخدمين */
 function renderPeopleFromData(data) {
     let list = document.getElementById('peopleList');
     let noPeople = document.getElementById('noPeople');
@@ -807,6 +828,7 @@ function renderPeopleFromData(data) {
 }
 
 // ========== SCREEN 3: Chat ==========
+/** فتح شاشة الدردشة مع مستخدم محدد */
 function startChat(userId, userName, uLat, uLng) {
     unreadFrom.delete(userId);
     currentChatUser = { id: userId, name: userName, lat: uLat, lng: uLng };
@@ -982,6 +1004,7 @@ function startChat(userId, userName, uLat, uLng) {
     document.getElementById('backToPeople').onclick = leaveChat;
 }
 
+/** حفظ رسالة في سجل المحادثات المحلي */
 function saveToHistory(userId, text, isMe) {
     if (!chatHistory.has(userId)) chatHistory.set(userId, []);
     let h = chatHistory.get(userId);
@@ -989,6 +1012,7 @@ function saveToHistory(userId, text, isMe) {
     if (h.length > MAX_HISTORY_PER_USER) h.shift();
     persistChatHistory();
 }
+/** إضافة فقاعة رسالة جديدة في شاشة الدردشة */
 function addMsg(text, isMe, delivered = true, msgId = null) {
     let msgs = document.getElementById('chatMessages');
     let div = document.createElement('div');
@@ -1009,11 +1033,13 @@ function addMsg(text, isMe, delivered = true, msgId = null) {
     }
 }
 
+/** إظهار زر 'رسائل جديدة ↓' عند وصول رسالة والمستخدم بالأعلى */
 function showNewMsgButton() {
     let btn = document.getElementById('scrollDownBtn');
     if (btn) btn.style.display = 'flex';
 }
 
+/** إضافة رسالة نظام (مثل: غادر المحادثة، غيّر اسمه) */
 function addSystemMsg(text) {
     const msgs = document.getElementById('chatMessages');
     const div = document.createElement('div');
@@ -1025,6 +1051,7 @@ function addSystemMsg(text) {
 
 // ========== زر الرجوع في المتصفح ==========
 // دالة موحدة للخروج من الدردشة
+/** الخروج من الدردشة — تنظيف listeners والعودة لصفحة الجيران */
 function leaveChat() {
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
     // تنظيف typing
@@ -1048,11 +1075,13 @@ window.addEventListener('popstate', (e) => {
 });
 
 // ========== المساعدات ==========
+/** التبديل بين الشاشات (landing/people/chat) */
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 }
 
+/** حساب المسافة بالكيلومتر بين نقطتين (صيغة Haversine) */
 function getDistance(lat2, lng2) {
     if (lat2 == null || lng2 == null || isNaN(lat2) || isNaN(lng2)) return Infinity;
     const R = 6371;
@@ -1062,12 +1091,14 @@ function getDistance(lat2, lng2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+/** تنظيف النص من HTML لمنع XSS */
 function esc(text) {
     const d = document.createElement('div');
     d.textContent = text;
     return d.innerHTML;
 }
 
+/** مشاركة رابط الموقع عبر Web Share API أو نسخ للحافظة */
 function shareLink() {
     const url = window.location.href;
     if (navigator.share) {
@@ -1083,6 +1114,7 @@ function shareLink() {
     }
 }
 
+/** تنظيف شامل — إزالة كل listeners وintervals ومراجع Firebase */
 function cleanup() {
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
     if (myPresenceRef) { myPresenceRef.remove(); myPresenceRef = null; }
