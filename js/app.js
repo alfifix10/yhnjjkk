@@ -95,6 +95,18 @@ var lastMsgTime = 0;
 var myGpsAccuracy = 0;
 var msgsSentInMinute = 0;
 var minuteStart = Date.now();
+var DAILY_MSG_LIMIT = 200;
+var dailyMsgCount = 0;
+var dailyMsgDate = '';
+try {
+    var saved = JSON.parse(localStorage.getItem('jiranak_daily') || '{}');
+    var today = new Date().toDateString();
+    if (saved.date === today) { dailyMsgCount = saved.count || 0; dailyMsgDate = today; }
+    else { dailyMsgDate = today; }
+} catch(e) { dailyMsgDate = new Date().toDateString(); }
+function saveDailyCount() {
+    try { localStorage.setItem('jiranak_daily', JSON.stringify({date:dailyMsgDate, count:dailyMsgCount})); } catch(e) {}
+}
 var chatHistory = loadChatHistory();
 
 function loadChatHistory() {
@@ -176,7 +188,18 @@ function getAudioContext() {
     return _audioCtx;
 }
 
+var soundEnabled = true;
+try { soundEnabled = localStorage.getItem('jiranak_sound') !== 'off'; } catch(e) {}
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    try { localStorage.setItem('jiranak_sound', soundEnabled ? 'on' : 'off'); } catch(e) {}
+    var btn = document.getElementById('soundToggle');
+    if (btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
+}
+
 function playNotif() {
+    if (!soundEnabled) return;
     try {
         const ctx = getAudioContext();
         const t = ctx.currentTime;
@@ -569,6 +592,8 @@ function enterPeopleScreen() {
             addMsg(msg.text, false);
             saveToHistory(msg.from, msg.text, false);
             if (navigator.vibrate) navigator.vibrate(50);
+            // إرسال إشعار قراءة للمرسل
+            db.ref('typing/' + msg.from + '/read_' + myId).set(Date.now());
         } else {
             saveToHistory(msg.from, msg.text, false);
             unreadFrom.add(msg.from);
@@ -791,6 +816,17 @@ function startChat(userId, userName, uLat, uLng) {
     var typingIndicator = document.getElementById('typingIndicator');
     myTypingRef.onDisconnect().remove();
 
+    // مراقبة إشعار القراءة — تحديث ✓ إلى ✓✓
+    var readRef = db.ref('typing/' + myId + '/read_' + userId);
+    readRef.on('value', function(snap) {
+        if (snap.val()) {
+            // تحديث آخر رسالة مرسلة إلى ✓✓
+            var allTicks = document.querySelectorAll('.msg-me .msg-tick');
+            allTicks.forEach(function(tick) { if (tick.textContent === '✓') tick.textContent = '✓✓'; });
+            readRef.remove();
+        }
+    });
+
     partnerTypingRef.on('value', function(snap) {
         if (snap.val()) {
             typingIndicator.style.display = 'flex';
@@ -842,6 +878,15 @@ function startChat(userId, userName, uLat, uLng) {
             addSystemMsg('⚠️ أرسلت رسائل كثيرة، انتظر قليلاً');
             return;
         }
+        // حد يومي
+        var today = new Date().toDateString();
+        if (dailyMsgDate !== today) { dailyMsgCount = 0; dailyMsgDate = today; }
+        dailyMsgCount++;
+        if (dailyMsgCount > DAILY_MSG_LIMIT) {
+            addSystemMsg('⚠️ وصلت الحد اليومي (' + DAILY_MSG_LIMIT + ' رسالة). حاول غداً');
+            return;
+        }
+        saveDailyCount();
         lastMsgTime = now;
 
         const thisMsgId = 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
@@ -956,11 +1001,12 @@ function addSystemMsg(text) {
 // دالة موحدة للخروج من الدردشة
 function leaveChat() {
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
-    // تنظيف typing
+    // تنظيف typing + read
     try {
         if (currentChatUser) {
             db.ref('typing/' + currentChatUser.id + '/' + myId).set(null);
             db.ref('typing/' + myId + '/' + currentChatUser.id).off();
+            db.ref('typing/' + myId + '/read_' + currentChatUser.id).off();
         }
     } catch(e) {}
     currentChatUser = null;

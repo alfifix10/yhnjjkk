@@ -77,6 +77,7 @@
         <div style="display:flex;gap:6px">
             <button class="btn" onclick="loadLogs()">🔄</button>
             <button class="btn" id="liveBtn" onclick="toggleLive()">📡 مباشر</button>
+            <button class="btn" style="color:var(--a)" onclick="sendAnnouncement()">📢</button>
             <button class="btn" style="color:var(--r)" onclick="logout()">خروج</button>
         </div>
     </div>
@@ -229,6 +230,16 @@ function unbanUser(uid) {
     if (fp) db.ref('banned/' + fp).remove();
 }
 
+function sendAnnouncement() {
+    const text = prompt('اكتب الإعلان:');
+    if (!text || !text.trim()) return;
+    if (!onlineIds.size) { alert('لا يوجد متصلين حالياً'); return; }
+    onlineIds.forEach(uid => {
+        db.ref('msgs/' + uid).push({ from:'admin', name:'📢 الإدارة', text: '📢 ' + text.trim(), t:firebase.database.ServerValue.TIMESTAMP, system:true });
+    });
+    alert('تم إرسال الإعلان لـ ' + onlineIds.size + ' متصل');
+}
+
 function doSearch() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
@@ -291,7 +302,7 @@ function initListeners() {
 function loadLogs() {
     db.ref('logs').orderByChild('t').limitToLast(5000).once('value', snap => {
         const data = snap.val() || {};
-        logs = Object.values(data).sort((a, b) => (b.t||0) - (a.t||0));
+        logs = Object.entries(data).map(([k,v]) => ({...v, _key:k})).sort((a, b) => (b.t||0) - (a.t||0));
 
         convs = {};
         logs.forEach(m => {
@@ -300,15 +311,15 @@ function loadLogs() {
             [['from','fromName'],['to','toName']].forEach(([idKey, nameKey]) => {
                 const uid = m[idKey], name = m[nameKey];
                 if (!uid || uid === 'admin') return;
-                if (!allUsers[uid]) allUsers[uid] = { name: name, firstSeen: m.t, lastSeen: m.t };
+                if (!allUsers[uid]) allUsers[uid] = { name: name, firstSeen: m.t, lastSeen: m.t, msgCount: 0 };
                 else {
                     if (m.t < allUsers[uid].firstSeen) allUsers[uid].firstSeen = m.t;
                     if (m.t > allUsers[uid].lastSeen) {
                         allUsers[uid].lastSeen = m.t;
-                        // نحدّث الاسم فقط من رسائل أحدث (الأقدم لا تطغى)
                         if (name && !onlineIds.has(uid)) allUsers[uid].name = name;
                     }
                 }
+                if (m.from === uid && m.from !== m.to) allUsers[uid].msgCount = (allUsers[uid].msgCount||0) + 1;
             });
 
             // تخطي رسائل الدخول (from === to) من المحادثات
@@ -350,7 +361,8 @@ function renderUsers() {
             const statusText = isOn ? 'متصل الآن' : fmtFull(u.lastSeen);
             h += '<div class="item"><div><span class="name">' + esc(u.name||'—') + '</span>';
             h += '<span class="' + dotCls + '"></span>';
-            h += '<div class="id">' + id.slice(0,14) + ' · ' + statusText + '</div>';
+            const mc = u.msgCount||0;
+            h += '<div class="id">' + id.slice(0,14) + ' · ' + statusText + (mc ? ' · ' + mc + ' رسالة' : '') + '</div>';
             h += '</div>';
             h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + escAttr(id) + '" data-name="' + escAttr(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div>';
         });
@@ -382,10 +394,22 @@ function renderConvs() {
             ch += '<div><div class="name">' + esc(names.join(' ↔ ')) + '</div>';
             ch += '<div class="preview' + textCls + '">' + esc(c.lastText||'') + '</div>';
             ch += '<div class="time">' + fmtFull(c.lastTime) + '</div></div>';
-            ch += '<div class="badge">' + c.msgs.length + '</div></div></div>';
+            ch += '<div style="display:flex;gap:6px;align-items:center"><span class="badge">' + c.msgs.length + '</span>';
+            ch += '<button class="btn" style="font-size:9px;padding:2px 5px;color:var(--r);border-color:var(--r)" data-delconv="' + escAttr(key) + '" onclick="event.stopPropagation();deleteConv(this.dataset.delconv)">🗑</button></div></div></div>';
         });
     }
     document.getElementById('p-convs').innerHTML = ch;
+}
+
+function deleteConv(key) {
+    const c = convs[key];
+    if (!c) return;
+    const names = Object.values(c.users).filter(Boolean).join(' ↔ ');
+    if (!confirm('حذف محادثة ' + names + ' (' + c.msgs.length + ' رسالة)؟')) return;
+    c.msgs.forEach(m => { if (m._key) db.ref('logs/' + m._key).remove(); });
+    delete convs[key];
+    totalConvs = Object.keys(convs).length;
+    renderConvs();
 }
 
 function openConv(key) {
