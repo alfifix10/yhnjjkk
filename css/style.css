@@ -169,6 +169,8 @@ body {
 }
 .logo-dot {
     letter-spacing: 0;
+    opacity: 0.4;
+    font-weight: 700;
 }
 .logo-en {
     display: block;
