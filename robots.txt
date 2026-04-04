@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /gps-test.html
+
+Sitemap: https://jeerani.net/sitemap.xml
