@@ -141,7 +141,7 @@ body {
         padding: 20px 16px 16px;
         margin: 8px;
     }
-    .logo-text { font-size: 36px; }
+    .logo-text { font-size: 28px; }
     .logo-en { font-size: 13px; letter-spacing: 5px; }
     .title { font-size: 22px; margin-bottom: 2px; }
     .subtitle { font-size: 13px; margin-bottom: 10px; }
@@ -157,7 +157,7 @@ body {
 
 /* ========== LANDING SCREEN ========== */
 .logo-text {
-    font-size: 38px;
+    font-size: 32px;
     font-weight: 900;
     margin-bottom: 24px;
     text-align: center;
