@@ -222,13 +222,6 @@ function banUser(uid, name) {
     const fp = getFpFromId(uid);
     if (fp) db.ref('banned/' + fp).set({ name:name, t:firebase.database.ServerValue.TIMESTAMP, linkedTo:uid });
 }
-function removeUser(uid) {
-    if (!confirm('حذف هذا المستخدم من القائمة؟')) return;
-    delete allUsers[uid];
-    saveUsers();
-    renderUsers();
-    document.getElementById('sAll').textContent = Object.keys(allUsers).length;
-}
 function unbanUser(uid) {
     db.ref('banned/' + uid).remove();
     // إلغاء حظر البصمة المرتبطة
@@ -357,10 +350,7 @@ function renderUsers() {
             h += '<span class="' + dotCls + '"></span>';
             h += '<div class="id">' + id.slice(0,14) + ' · ' + statusText + '</div>';
             h += '</div>';
-            h += '<div style="display:flex;gap:4px">';
-            h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + escAttr(id) + '" data-name="' + escAttr(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button>';
-            h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--m);border-color:var(--m)" data-uid="' + escAttr(id) + '" onclick="removeUser(this.dataset.uid)">✕</button>';
-            h += '</div></div>';
+            h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + escAttr(id) + '" data-name="' + escAttr(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div>';
         });
     }
     h += '</div>';
