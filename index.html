@@ -110,31 +110,12 @@
                     <input type="text" id="nicknameInput" placeholder="اكتب اسم مستعار..." maxlength="20" autocomplete="off">
                     <button type="button" id="joinBtn" class="btn-primary">ادخل</button>
                 </div>
-                <div class="random-names" id="randomNames"></div>
-                <script>
-                (function(){
-                    var names = [
-                        'ظل الليل','نجم ساهر','غريب الدار','همس الشوارع',
-                        'ساكن السطح','عابر سبيل','طيف مجهول','قمر الحارة',
-                        'صدى البيوت','روح حرة','نسمة فجر','ضي القمر',
-                        'سراب','خيال','أثير','شبح ودود',
-                        'جار خفي','ابن الزقاق','صاحب السر','حارس الحي',
-                        'زائر الليل','ولد الديرة','ساهر','مسافر',
-                        'غيمة صيف','برق خاطف','موج هادي','ريح حرة',
-                        'كوكب بعيد','شهاب','فانوس','بدر'
-                    ];
-                    var shuffled = names.sort(function(){return Math.random()-0.5;});
-                    var pick = shuffled.slice(0,4);
-                    var container = document.getElementById('randomNames');
-                    pick.forEach(function(n){
-                        var btn = document.createElement('button');
-                        btn.className = 'name-chip';
-                        btn.dataset.name = n;
-                        btn.textContent = n;
-                        container.appendChild(btn);
-                    });
-                })();
-                </script>
+                <div class="random-names">
+                    <button class="name-chip" data-name="ولد الديرة">ولد الديرة</button>
+                    <button class="name-chip" data-name="بنت الحي">بنت الحي</button>
+                    <button class="name-chip" data-name="أبو فهد">أبو فهد</button>
+                    <button class="name-chip" data-name="جار خفي">جار خفي</button>
+                </div>
             </div>
         </div>
     </div>
