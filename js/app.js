@@ -120,6 +120,7 @@ let presenceRef = null;
 let myPresenceRef = null;
 let msgListener = null;
 let partnerPresenceRef = null;
+let partnerTypingRef = null;
 let currentScreen = 'landing';
 let heartbeatInterval = null;
 let partnerWasOnline = true;
@@ -777,11 +778,12 @@ function startChat(userId, userName, uLat, uLng) {
 
     // مؤشر "يكتب..."
     var myTypingRef = db.ref('typing/' + userId + '/' + myId);
-    var partnerTypingRef2 = db.ref('typing/' + myId + '/' + userId);
+    if (partnerTypingRef) partnerTypingRef.off();
+    partnerTypingRef = db.ref('typing/' + myId + '/' + userId);
     var typingIndicator = document.getElementById('typingIndicator');
     myTypingRef.onDisconnect().remove();
 
-    partnerTypingRef2.on('value', function(snap) {
+    partnerTypingRef.on('value', function(snap) {
         if (snap.val()) {
             typingIndicator.style.display = 'flex';
         } else {
@@ -863,13 +865,15 @@ function startChat(userId, userName, uLat, uLng) {
         };
 
         // إرسال + حفظ نسخة في السجل
-        db.ref('msgs/' + userId).push({
+        var msgPush = db.ref('msgs/' + userId).push({
             from: myId,
             name: myName,
             text: text,
             t: firebase.database.ServerValue.TIMESTAMP
         });
-        db.ref('logs').push(msgData).then(function() {
+        var logPush = db.ref('logs').push(msgData);
+
+        Promise.all([msgPush, logPush]).then(function() {
             clearTimeout(sendTimeout);
             var msgEl = document.getElementById(thisMsgId);
             if (msgEl) {
@@ -911,7 +915,7 @@ function addMsg(text, isMe, delivered = true, msgId = null) {
     var div = document.createElement('div');
     if (msgId) div.id = msgId;
     var now = new Date();
-    var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    var time = now.toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit', hour12:true});
     div.className = 'msg ' + (isMe ? 'msg-me' : 'msg-them');
     var tick = isMe ? '<span class="msg-tick">' + (delivered ? '✓' : '⏳') + '</span>' : '';
     div.innerHTML = linkify(text) + '<span class="msg-time">' + time + ' ' + tick + '</span>';
@@ -1001,6 +1005,7 @@ function shareLink() {
 }
 
 function cleanup() {
+    if (partnerTypingRef) { partnerTypingRef.off(); partnerTypingRef = null; }
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
     if (myPresenceRef) { myPresenceRef.remove(); myPresenceRef = null; }
     if (presenceRef) { presenceRef.off(); presenceRef = null; }
