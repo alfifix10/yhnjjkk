@@ -1,9 +1,6 @@
 // ========================================
-// Jeerani — دردش مع جيرانك
-// Anonymous proximity chat
+// Jeerani — Jeerani
 // ========================================
-
-'use strict';
 
 const firebaseConfig = {
     apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
@@ -18,9 +15,8 @@ const firebaseConfig = {
 let db;
 
 // بصمة الجهاز — ثابتة حتى لو مسح localStorage أو فتح incognito
-/** إنشاء بصمة فريدة للجهاز باستخدام Canvas + معلومات المتصفح */
 function getDeviceFingerprint() {
-    let parts = [
+    var parts = [
         navigator.userAgent,
         navigator.language,
         screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
@@ -30,16 +26,16 @@ function getDeviceFingerprint() {
     ];
     // Canvas fingerprint
     try {
-        let c = document.createElement('canvas');
-        let ctx = c.getContext('2d');
+        var c = document.createElement('canvas');
+        var ctx = c.getContext('2d');
         ctx.textBaseline = 'top';
         ctx.font = '14px Arial';
-        ctx.fillText('jeerani-fp', 2, 2);
+        ctx.fillText('jiranak-fp', 2, 2);
         parts.push(c.toDataURL().slice(-50));
     } catch(e) {}
     // Hash
-    let str = parts.join('|');
-    let hash = 0;
+    var str = parts.join('|');
+    var hash = 0;
     for (var i = 0; i < str.length; i++) {
         hash = ((hash << 5) - hash) + str.charCodeAt(i);
         hash = hash & hash;
@@ -47,81 +43,78 @@ function getDeviceFingerprint() {
     return 'fp-' + Math.abs(hash).toString(36);
 }
 
-/** إنشاء معرّف فريد — يستخدم crypto.randomUUID أو fallback */
 function generateId() {
     if (crypto && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxx-xxxx-xxxx'.replace(/x/g, function() { return Math.floor(Math.random() * 16).toString(16); });
 }
 
 // استرجاع الهوية: localStorage أولاً، ثم بصمة الجهاز، ثم إنشاء جديد
-/** استرجاع هوية المستخدم من localStorage/cookie أو إنشاء جديدة */
 function getOrCreateId() {
     try {
-        let stored = localStorage.getItem('jeerani_id');
+        var stored = localStorage.getItem('jiranak_id');
         if (stored) return stored;
     } catch(e) {}
 
     // لو مسح localStorage، نحاول نسترجع من cookie
     try {
-        let cookieMatch = document.cookie.match(/jeerani_id=([^;]+)/);
+        var cookieMatch = document.cookie.match(/jiranak_id=([^;]+)/);
         if (cookieMatch) {
-            try { localStorage.setItem('jeerani_id', cookieMatch[1]); } catch(e) {}
+            try { localStorage.setItem('jiranak_id', cookieMatch[1]); } catch(e) {}
             return cookieMatch[1];
         }
     } catch(e) {}
 
     // هوية جديدة مبنية على بصمة الجهاز
-    let fp = getDeviceFingerprint();
-    let id = fp + '-' + generateId().slice(0, 8);
-    try { localStorage.setItem('jeerani_id', id); } catch(e) {}
-    try { document.cookie = 'jeerani_id=' + id + ';max-age=31536000;path=/;SameSite=Lax'; } catch(e) {}
+    var fp = getDeviceFingerprint();
+    var id = fp + '-' + generateId().slice(0, 8);
+    try { localStorage.setItem('jiranak_id', id); } catch(e) {}
+    try { document.cookie = 'jiranak_id=' + id + ';max-age=31536000;path=/;SameSite=Lax'; } catch(e) {}
     return id;
 }
 
-const myId = getOrCreateId();
-let myName = '';
-let myLat = 0;
-let myLng = 0;
-let currentChatUser = null;
-const unreadFrom = new Set();
-let myOldIds;
-try { myOldIds = new Set(JSON.parse(localStorage.getItem('jeerani_old_ids') || '[]')); } catch(e) { myOldIds = new Set(); }
-let blockedUsers;
-try { blockedUsers = new Set(JSON.parse(localStorage.getItem('jeerani_blocked') || '[]')); } catch(e) { blockedUsers = new Set(); }
-let lastMsgTime = 0;
-let msgsSentInMinute = 0;
-let minuteStart = Date.now();
-let chatHistory = loadChatHistory();
+var myId = getOrCreateId();
+var myName = '';
+var myLat = 0;
+var myLng = 0;
+var currentChatUser = null;
+var unreadFrom = new Set();
+var myOldIds;
+try { myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]')); } catch(e) { myOldIds = new Set(); }
+var blockedUsers;
+try { blockedUsers = new Set(JSON.parse(localStorage.getItem('jiranak_blocked') || '[]')); } catch(e) { blockedUsers = new Set(); }
+var lastMsgTime = 0;
+var myGpsAccuracy = 0;
+var msgsSentInMinute = 0;
+var minuteStart = Date.now();
+var chatHistory = loadChatHistory();
 
-/** تحميل سجل المحادثات من localStorage */
 function loadChatHistory() {
     try {
-        let saved = localStorage.getItem('jeerani_history');
+        var saved = localStorage.getItem('jiranak_history');
         if (saved) {
-            let parsed = JSON.parse(saved);
+            var parsed = JSON.parse(saved);
             if (Array.isArray(parsed)) return new Map(parsed);
         }
     } catch(e) {
-        try { localStorage.removeItem('jeerani_history'); } catch(x) {}
+        try { localStorage.removeItem('jiranak_history'); } catch(x) {}
     }
     return new Map();
 }
 
-/** حفظ سجل المحادثات في localStorage (آخر 20 محادثة) */
 function persistChatHistory() {
     try {
-        let arr = [...chatHistory.entries()].slice(-20);
-        localStorage.setItem('jeerani_history', JSON.stringify(arr));
+        var arr = [...chatHistory.entries()].slice(-20);
+        localStorage.setItem('jiranak_history', JSON.stringify(arr));
     } catch(e) {}
 }
 let presenceRef = null;
 let myPresenceRef = null;
+let msgListener = null;
 let partnerPresenceRef = null;
 let currentScreen = 'landing';
 let heartbeatInterval = null;
 let partnerWasOnline = true;
 let typingTimeout = null;
-const _intervals = []; // كل الـ intervals عشان نقدر ننظفها
 
 const AVATARS = ['😎','🦊','🐱','🦁','🐸','🦉','🐼','🐨','🦋','🌸','⚡','🔥','🌙','🎭','👻','🤖','🎯','💎','🌈','🍀'];
 const GRADIENTS = [
@@ -135,38 +128,22 @@ const GRADIENTS = [
     'linear-gradient(135deg, #a29bfe, #fd79a8)',
 ];
 
-/** حساب وتنسيق المسافة بين المستخدم الحالي والإحداثيات المعطاة */
-/** حساب وتنسيق المسافة مع مراعاة دقة GPS للطرفين */
-function formatDistance(lat, lng, theirAcc) {
-    if (!myLat || !lat || !lng) return '';
-    const dist = getDistance(lat, lng);
-    if (!dist || isNaN(dist) || dist === Infinity) return '';
-    const m = Math.round(dist * 1000);
-    const myAcc = window._myAccuracy || 99999;
-    const otherAcc = theirAcc || 99999;
-    const combinedAcc = myAcc + otherAcc;
-
-    // لو مجموع الدقتين أكبر من المسافة — المسافة غير موثوقة
-    if (combinedAcc > m && m > 100) {
-        if (combinedAcc < 2000) return '🟢 في الجوار';
-        if (combinedAcc < 10000) return '🟡 في نفس المنطقة';
-        return '🟠 قريب';
-    }
-
-    // مسافة دقيقة
-    if (m < 10) return '🟢 بجانبك تقريباً';
-    if (m < 100) return '🟢 ' + m + ' متر';
-    if (m < 1000) return '🟡 ' + m + ' متر';
+function formatDistance(lat, lng) {
+    if (!myGpsReady || myLat === 0 || !lat || !lng) return '⏳ جاري تحديد الموقع';
+    var dist = getDistance(lat, lng);
+    if (isNaN(dist) || dist === Infinity) return '⏳ جاري تحديد الموقع';
+    var meters = Math.round(dist * 1000);
+    if (meters < 10) return '🟢 بجانبك تقريباً';
+    if (meters < 100) return '🟢 ' + meters + ' متر';
+    if (meters < 1000) return '🟡 ' + meters + ' متر';
     if (dist < 10) return '🟠 ' + dist.toFixed(1) + ' كم';
     return '⚪ ' + Math.round(dist) + ' كم';
 }
 
+var myGpsReady = false; // يصبح true فقط لما الدقة < 100 متر
 
-/** اختيار إيموجي أفاتار بناءً على hash الـ ID */
 function getAvatar(id) { return AVATARS[hashCode(id) % AVATARS.length]; }
-/** اختيار تدرج لوني بناءً على hash الـ ID */
 function getGradient(id) { return GRADIENTS[hashCode(id) % GRADIENTS.length]; }
-/** حساب hash رقمي لنص — يُستخدم لتوزيع الأفاتارات والألوان */
 function hashCode(str) {
     let h = 0;
     for (let i = 0; i < str.length; i++) h = ((h << 5) - h) + str.charCodeAt(i);
@@ -174,19 +151,13 @@ function hashCode(str) {
 }
 
 // تقريب الإحداثيات — 3 خانات عشرية = دقة ~100 متر (حماية الخصوصية)
+function roundCoord(val) {
+    return Math.round(val * 1000) / 1000;
+}
 
 const MAX_HISTORY_PER_USER = 100;
-const GPS_FAST_INTERVAL = 3000;
-const GPS_SLOW_INTERVAL = 15000;
-const GPS_FAST_DURATION = 30000;
-const GPS_TIMEOUT = 15000;
-const STALE_USER_MS = 120000;
-const STALE_CHECK_MS = 30000;
-const HEARTBEAT_MS = 30000;
-const DISTANCE_REFRESH_MS = 5000;
 
 let _audioCtx = null;
-/** إنشاء أو إعادة استخدام AudioContext واحد لتشغيل الأصوات */
 function getAudioContext() {
     if (!_audioCtx || _audioCtx.state === 'closed') {
         _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -195,7 +166,6 @@ function getAudioContext() {
     return _audioCtx;
 }
 
-/** تشغيل صوت إشعار (نغمة مزدوجة شبيهة بسناب شات) */
 function playNotif() {
     try {
         const ctx = getAudioContext();
@@ -226,7 +196,6 @@ function playNotif() {
     } catch (e) {}
 }
 
-/** عرض نافذة modal مع عنوان ورسالة وأزرار — بديل prompt/confirm */
 function showModal(opts) {
     const overlay = document.getElementById('modalOverlay');
     const titleEl = document.getElementById('modalTitle');
@@ -294,11 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
 
-        let savedName = localStorage.getItem('jeerani_name');
+        var savedName = localStorage.getItem('jiranak_name');
         if (savedName) {
             myName = savedName;
-            // نحاول نحصل الموقع من IP فوراً (سريع وما يحتاج إذن)
-            getLocationByIP();
             enterPeopleScreen();
         } else {
             initLanding();
@@ -308,7 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-/** إنشاء جزيئات متحركة في الخلفية للتأثير البصري */
 function initParticles() {
     const c = document.getElementById('particles');
     const colors = ['#6c5ce7','#00cec9','#fd79a8','#a29bfe'];
@@ -322,20 +288,19 @@ function initParticles() {
 }
 
 // ========== SCREEN 1: Landing ==========
-/** تهيئة شاشة الدخول — حقل الاسم وأزرار الأسماء السريعة */
 function initLanding() {
     currentScreen = 'landing';
     showScreen('landingScreen');
     const input = document.getElementById('nicknameInput');
     const joinBtn = document.getElementById('joinBtn');
-    let savedName = localStorage.getItem('jeerani_name');
+    var savedName = localStorage.getItem('jiranak_name');
     input.value = savedName || '';
     joinBtn.disabled = false;
     joinBtn.textContent = 'ادخل';
     setTimeout(function() { input.focus(); }, 300);
 
     joinBtn.onclick = () => {
-        let name = input.value.trim();
+        var name = input.value.trim();
         if (name.length < 1) {
             input.style.borderColor = '#fd79a8';
             input.focus();
@@ -343,7 +308,7 @@ function initLanding() {
             return;
         }
         myName = name;
-        localStorage.setItem('jeerani_name', name);
+        localStorage.setItem('jiranak_name', name);
         requestLocation();
     };
 
@@ -354,143 +319,83 @@ function initLanding() {
     });
 }
 
+let geoWatchId = null;
+let enteredFromGeo = false;
 
-
-/** طلب إذن الموقع والدخول لصفحة الجيران */
 function requestLocation() {
-    let btn = document.getElementById('joinBtn');
+    const btn = document.getElementById('joinBtn');
     if (btn) { btn.textContent = '⏳ انتظر...'; btn.disabled = true; }
-    // ندخل فوراً — GPS يشتغل بالخلفية عبر startGpsPoll
-    enterPeopleScreen();
-}
 
-// polling GPS كل 10 ثواني — أوثق من watchPosition
-let gpsPollInterval = null;
-/** نظام GPS احترافي — ينتظر حتى الدقة تتحسن بدل قبول أول قراءة */
-function startGpsPoll() {
-    if (window._gpsStarted || !navigator.geolocation) return;
-    window._gpsStarted = true;
-    window._myAccuracy = 99999;
-    let bestAccuracy = 99999;
-    let watchId = null;
-
-    function onPosition(pos) {
-        const acc = pos.coords.accuracy;
-        if (acc < bestAccuracy) {
-            bestAccuracy = acc;
-            window._myAccuracy = acc;
-            myLat = pos.coords.latitude;
-            myLng = pos.coords.longitude;
-            if (myPresenceRef) myPresenceRef.update({ lat: myLat, lng: myLng, acc: Math.round(acc) });
-            const badge = document.getElementById('onlineCount');
-            if (badge) {
-                if (acc < 100) badge.textContent = '✅ GPS دقيق';
-                else if (acc < 5000) badge.textContent = '✅ متصل';
-                else badge.textContent = '✅ متصل';
-            }
-            updateAllDistances();
-        }
-        if (acc < 30 && watchId) {
-            navigator.geolocation.clearWatch(watchId);
-            watchId = null;
-            gpsPollInterval = setInterval(function() {
-                navigator.geolocation.getCurrentPosition(onPosition, function() {},
-                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 });
-            }, 30000);
-        }
+    if (!navigator.geolocation) {
+        // المتصفح ما يدعم GPS — ادخل بدون موقع
+        enterPeopleScreen();
+        return;
     }
 
-    function onError(err) {
-        if (err.code === 1 && !myLat) {
-            getLocationByIP();
-            if (!window._gpsDeniedShown) {
-                window._gpsDeniedShown = true;
-                const isIOS = /iPhone|iPad/i.test(navigator.userAgent);
-                showModal({
-                    title: '📍 المسافات غير دقيقة',
-                    message: isIOS
-                        ? 'لتحسين دقة المسافات:\nالإعدادات ← الخصوصية ← خدمات الموقع ← Safari'
-                        : 'لتحسين دقة المسافات:\nاضغط 🔒 بجانب الرابط ← أذونات الموقع ← سماح',
-                    buttons: [
-                        { text: 'حدّث الصفحة', cls: 'modal-btn-primary', action: function() { location.reload(); } },
-                        { text: 'تخطي', cls: 'modal-btn-cancel', action: function() {} }
-                    ]
-                });
+    enteredFromGeo = false;
+
+    // محاولة واحدة سريعة أولاً
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            var accuracy = pos.coords.accuracy || 99999;
+            myGpsAccuracy = accuracy;
+            // نحفظ الإحداثيات فقط لو دقيقة
+            if (accuracy < 200) {
+                myLat = pos.coords.latitude;
+                myLng = pos.coords.longitude;
+                myGpsReady = true;
             }
-        }
-    }
-
-    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
-        enableHighAccuracy: true, maximumAge: 0, timeout: 60000
-    });
-
-    setTimeout(function() {
-        if (bestAccuracy > 1000) {
-            navigator.geolocation.getCurrentPosition(onPosition, function() {},
-                { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 });
-        }
-    }, 20000);
-
-    window._gpsWatchId = watchId;
+            enteredFromGeo = true;
+            enterPeopleScreen();
+            startGeoWatch();
+        },
+        () => {
+            // GPS مرفوض أو فشل — ادخل بدون موقع
+            enteredFromGeo = true;
+            enterPeopleScreen();
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
 }
 
-/** حذف المستخدمين غير النشطين (أكثر من دقيقة) من Firebase */
-function cleanStaleUsers(cache) {
-    let now = Date.now();
-    Object.keys(cache).forEach(function(id) {
-        let u = cache[id];
-        if (u && u.t && now - u.t > STALE_USER_MS && id !== myId) {
-            db.ref('online/' + id).remove();
-            delete cache[id];
-        }
-    });
-}
+function startGeoWatch() {
+    if (geoWatchId !== null) return;
+    if (!navigator.geolocation) return;
+    geoWatchId = navigator.geolocation.watchPosition(
+        function(pos) {
+            var newLat = pos.coords.latitude;
+            var newLng = pos.coords.longitude;
+            var accuracy = pos.coords.accuracy || 99999;
+            myGpsAccuracy = accuracy;
 
-/** الحصول على الموقع التقريبي من IP كـ fallback لـ GPS */
-function getLocationByIP() {
-    if (myLat && window._myAccuracy < 5000) return;
-    fetch('https://ipapi.co/json/')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.latitude && data.longitude && (!myLat || window._myAccuracy > 50000)) {
-                myLat = data.latitude;
-                myLng = data.longitude;
-                window._myAccuracy = 50000;
-                if (myPresenceRef) myPresenceRef.update({ lat: myLat, lng: myLng, acc: 50000 });
-                updateAllDistances();
+            // نقبل الموقع فقط لو الدقة أقل من 200 متر (GPS حقيقي)
+            if (accuracy > 200) return;
+
+            // كشف قفزة مريبة
+            if (myLat !== 0 && myLng !== 0) {
+                var jump = getDistance(newLat, newLng);
+                if (jump > 50) return;
             }
-        })
-        .catch(function() {
-            fetch('https://ip-api.com/json/?fields=lat,lon')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.lat && data.lon && (!myLat || window._myAccuracy > 50000)) {
-                        myLat = data.lat;
-                        myLng = data.lon;
-                        window._myAccuracy = 50000;
-                        if (myPresenceRef) myPresenceRef.update({ lat: myLat, lng: myLng, acc: 50000 });
-                        updateAllDistances();
-                    }
-                }).catch(function() {});
-        });
-}
 
-/** تحديث نص المسافة لكل المستخدمين المعروضين بالقائمة */
-function updateAllDistances() {
-    document.querySelectorAll('.person-card').forEach(function(card) {
-        const uid = card.dataset.uid;
-        const u = window._onlineCache ? window._onlineCache[uid] : null;
-        if (!u) return;
-        const distEl = card.querySelector('.person-distance');
-        if (distEl) {
-            const d = formatDistance(u.lat, u.lng, u.acc);
-            if (distEl.textContent !== d) distEl.textContent = d;
-        }
-    });
+            myLat = newLat;
+            myLng = newLng;
+            myGpsReady = true;
+
+            // حدّث Firebase + أعد عرض القائمة
+            if (myPresenceRef) {
+                myPresenceRef.update({ lat: myLat, lng: myLng, acc: Math.round(accuracy) });
+            }
+            // تحديث المسافات في القائمة
+            if (presenceRef && currentScreen === 'people') {
+                presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
+            }
+        },
+        function() {},
+        { enableHighAccuracy: true, maximumAge: 0 }
+    );
 }
 
 // ========== SCREEN 2: People ==========
-/** تهيئة شاشة الجيران — Firebase listeners + GPS + عرض القائمة */
 function enterPeopleScreen() {
     cleanup();
 
@@ -501,18 +406,17 @@ function enterPeopleScreen() {
     history.pushState({ screen: 'people' }, '', '');
 
     // تحديث الموقع بالخلفية
-    startGpsPoll();
+    startGeoWatch();
 
-    // تفعيل إشعارات Push
-    initPushNotifications();
-
-    // لو GPS ما جهز بعد 15 ثانية → نعرض الكل بدون فلتر GPS
+    // لو GPS ما جهز بعد 20 ثانية → نعرض الكل كـ fallback
     setTimeout(function() {
-        if (!myLat && presenceRef) {
-            window._skipGpsFilter = true;
-            presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
+        if (!myGpsReady && currentScreen === 'people') {
+            myGpsReady = true; // نقبل أي موقع متاح
+            if (presenceRef) {
+                presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
+            }
         }
-    }, 15000);
+    }, 20000);
 
     presenceRef = db.ref('online');
     myPresenceRef = presenceRef.child(myId);
@@ -522,226 +426,110 @@ function enterPeopleScreen() {
         db.ref('online/' + oldId).remove();
     });
 
-    // مراقبة اتصال Firebase — إعادة تسجيل الحضور عند العودة
-    let wasConnected = false;
+    // مراقبة اتصال Firebase — يظهر البانر فقط لو انقطع بعد ما كان متصل
+    var wasConnected = false;
     db.ref('.info/connected').on('value', function(snap) {
+        var banner = document.getElementById('offlineBanner');
         if (snap.val() === true) {
-            if (wasConnected && myPresenceRef) {
-                let presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
-                if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
-                myPresenceRef.set(presenceData);
-            }
             wasConnected = true;
+            if (banner) banner.style.display = 'none';
             if (myPresenceRef) myPresenceRef.onDisconnect().remove();
+        } else if (wasConnected && banner) {
+            banner.style.display = 'flex';
         }
     });
 
-    let presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
-    if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
+    var presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
+    // لا نحفظ الإحداثيات إلا لما تكون دقيقة (GPS حقيقي)
+    if (myGpsReady && myLat !== 0) {
+        presenceData.lat = myLat;
+        presenceData.lng = myLng;
+    }
     myPresenceRef.set(presenceData);
     myPresenceRef.onDisconnect().remove();
 
     // [FIX 2] heartbeat واحد فقط
     heartbeatInterval = setInterval(() => {
-        if (myPresenceRef) {
-            let hb = { t: firebase.database.ServerValue.TIMESTAMP };
-            if (myLat) { hb.lat = myLat; hb.lng = myLng; hb.acc = Math.round(window._myAccuracy || 99999); }
-            myPresenceRef.update(hb);
-        }
-    }, HEARTBEAT_MS);
+        if (myPresenceRef) myPresenceRef.update({ t: firebase.database.ServerValue.TIMESTAMP });
+    }, 60000);
 
-    // كاش محلي للمتصلين — نحدّث بذكاء بدون إعادة تحميل الكل
-    let onlineCache = {};
-    window._onlineCache = onlineCache;
-    let renderTimeout = null;
-
-    function scheduleRender() {
-        if (renderTimeout) clearTimeout(renderTimeout);
-        renderTimeout = setTimeout(function() {
-            renderPeopleFromData(onlineCache);
-        }, 500);
-    }
-
-    // إخفاء spinner بعد 5 ثواني كحد أقصى
-    setTimeout(function() {
-        let spinner = document.getElementById('searchingSpinner');
-        if (spinner && spinner.style.display !== 'none') {
-            spinner.style.display = 'none';
-            if (myLat) {
-                document.getElementById('onlineCount').textContent = '✅ متصل';
-            } else {
-                document.getElementById('onlineCount').textContent = '📍 فعّل الموقع لرؤية الجيران';
-            }
-        }
-    }, 5000);
-
-    // تنظيف كل البيانات القديمة من Firebase فوراً
-    presenceRef.once('value', function(snap) {
-        let data = snap.val() || {};
-        let now = Date.now();
-        Object.keys(data).forEach(function(id) {
-            if (id !== myId && data[id] && data[id].t && now - data[id].t > STALE_USER_MS) {
+    presenceRef.on('value', (snap) => {
+        const data = snap.val() || {};
+        // تنظيف الحسابات الميتة (أكثر من 3 دقائق)
+        const now = Date.now();
+        Object.entries(data).forEach(([id, u]) => {
+            if (u.t && now - u.t > 3 * 60 * 1000 && id !== myId) {
                 db.ref('online/' + id).remove();
             }
         });
-    });
 
-    // أول تحميل
-    presenceRef.once('value', function(snap) {
-        onlineCache = snap.val() || {};
-        let spinner = document.getElementById('searchingSpinner');
-        if (spinner) spinner.style.display = 'none';
-        document.getElementById('onlineCount').textContent = '✅ متصل';
-
-        // تنظيف الحسابات الميتة
-        cleanStaleUsers(onlineCache);
-        renderPeopleFromData(onlineCache);
-
-        // تنظيف دوري كل 30 ثانية
-        _intervals.push(setInterval(function() {
-            presenceRef.once('value', function(snap) {
-                let data = snap.val() || {};
-                let cleaned = false;
-                let now = Date.now();
-                Object.keys(data).forEach(function(id) {
-                    if (id !== myId && data[id] && data[id].t && now - data[id].t > STALE_USER_MS) {
-                        db.ref('online/' + id).remove();
-                        delete onlineCache[id];
-                        cleaned = true;
-                    }
-                });
-                if (cleaned) renderPeopleFromData(onlineCache);
-            });
-        }, STALE_CHECK_MS));
-
-        // تنظيف السجل — مرة واحدة
+        // تنظيف ذكي للسجل — مرة واحدة عند الدخول
         if (!window._logsCleanedUp) {
             window._logsCleanedUp = true;
+            var monthAgo = now - (30 * 24 * 60 * 60 * 1000);
             db.ref('logs').once('value', function(s) {
-                const now = Date.now();
-                let logData = s.val() || {};
-                let convs = {};
-                Object.entries(logData).forEach(function(e) {
-                    let key = e[0], m = e[1];
-                    if (!m.from || !m.to) return;
-                    let pair = [m.from, m.to].sort().join('_');
+                var data = s.val() || {};
+                // تجميع بالمحادثة
+                var convs = {};
+                Object.entries(data).forEach(function(entry) {
+                    var key = entry[0], m = entry[1];
+                    var pair = [m.from, m.to].sort().join('_');
                     if (!convs[pair]) convs[pair] = [];
                     convs[pair].push({ key: key, t: m.t || 0 });
                 });
-                let monthAgo = now - (30 * 24 * 60 * 60 * 1000);
+                // لكل محادثة: احتفظ بآخر 50، احذف الباقي
+                // محادثات ميتة (30 يوم): احذف بالكامل
                 Object.values(convs).forEach(function(msgs) {
                     msgs.sort(function(a, b) { return b.t - a.t; });
-                    if (now - (msgs[0] ? msgs[0].t : 0) > monthAgo) {
+                    var lastTime = msgs[0] ? msgs[0].t : 0;
+                    if (now - lastTime > monthAgo) {
+                        // محادثة ميتة — احذف الكل
                         msgs.forEach(function(m) { db.ref('logs/' + m.key).remove(); });
                     } else if (msgs.length > 50) {
+                        // احتفظ بآخر 50 فقط
                         msgs.slice(50).forEach(function(m) { db.ref('logs/' + m.key).remove(); });
                     }
                 });
             });
         }
+
+        // إخفاء spinner البحث
+        var spinner = document.getElementById('searchingSpinner');
+        if (spinner) spinner.style.display = 'none';
+        document.getElementById('onlineCount').textContent = '✅ متصل';
+        renderPeopleFromData(data);
     });
 
-    // بعد أول تحميل، نستمع للتغييرات الجديدة فقط
-    let initialLoadDone = false;
-    setTimeout(function() { initialLoadDone = true; }, 2000);
-
-    presenceRef.on('child_added', function(snap) {
-        if (snap.key === myId) return;
-        onlineCache[snap.key] = snap.val();
-        // نتجاهل الأحداث أثناء التحميل الأولي (once يتكفل)
-        if (initialLoadDone) scheduleRender();
-    });
-    presenceRef.on('child_changed', function(snap) {
-        let oldData = onlineCache[snap.key] || {};
-        let newData = snap.val();
-        // نحتفظ بالإحداثيات القديمة لو الجديدة ما فيها
-        if (oldData && oldData.lat && !newData.lat) { newData.lat = oldData.lat; newData.lng = oldData.lng; }
-        let hadCoords = oldData && oldData.lat;
-        let hasCoords = newData.lat;
-        onlineCache[snap.key] = newData;
-
-        // لو حصل على إحداثيات جديدة ما كانت موجودة → نعيد رسم القائمة (يظهر بالقائمة لأول مرة)
-        if (!hadCoords && hasCoords) {
-            scheduleRender();
-            return;
-        }
-
-        let card = document.querySelector('[data-uid="' + snap.key + '"]');
-        if (card && newData) {
-            // نحدّث المسافة بس لو فيه إحداثيات
-            if (newData.lat && newData.lng) {
-                let distEl = card.querySelector('.person-distance');
-                if (distEl) distEl.textContent = formatDistance(newData.lat, newData.lng, newData.acc);
-            }
-            if (oldData.name && newData.name && oldData.name !== newData.name) {
-                let nameEl = card.querySelector('.person-name');
-                if (nameEl) nameEl.textContent = newData.name;
-                card.dataset.uname = newData.name;
-            }
-        }
-    });
-    presenceRef.on('child_removed', function(snap) {
-        delete onlineCache[snap.key];
-        scheduleRender();
-    });
-
-    // تحديث المسافات كل 5 ثواني
-    _intervals.push(setInterval(function() {
-        if (currentScreen !== 'people') return;
-        document.querySelectorAll('.person-card').forEach(function(card) {
-            let uid = card.dataset.uid;
-            let u = onlineCache[uid];
-            if (u) {
-                let distEl = card.querySelector('.person-distance');
-                if (distEl) {
-                    let newDist = formatDistance(u.lat, u.lng);
-                    if (distEl.textContent !== newDist) distEl.textContent = newDist;
-                }
-            }
-        });
-    }, DISTANCE_REFRESH_MS));
-
-
-    // استمع للرسائل — نوقف أي listener قديم أولاً
-    db.ref('msgs/' + myId).off();
+    // استمع للرسائل
     const myMsgsRef = db.ref('msgs/' + myId);
-    myMsgsRef.on('child_added', (snap) => {
+    msgListener = myMsgsRef.on('child_added', (snap) => {
         const msg = snap.val();
         if (!msg) return;
 
         // تجاهل رسائل المحظورين
         if (blockedUsers.has(msg.from)) { snap.ref.remove(); return; }
 
-        try {
-            if (currentChatUser && currentChatUser.id === msg.from) {
-                addMsg(msg.text, false);
-                saveToHistory(msg.from, msg.text, false);
-                if (navigator.vibrate) navigator.vibrate(50);
-            } else {
-                saveToHistory(msg.from, msg.text, false);
-                unreadFrom.add(msg.from);
+        if (currentChatUser && currentChatUser.id === msg.from) {
+            addMsg(msg.text, false);
+            saveToHistory(msg.from, msg.text, false);
+            if (navigator.vibrate) navigator.vibrate(50);
+        } else {
+            saveToHistory(msg.from, msg.text, false);
+            unreadFrom.add(msg.from);
+            // الصوت فقط لو أنت بصفحة الجيران (مو بدردشة ثانية)
+            if (currentScreen === 'people') {
+                presenceRef.once('value', s => { renderPeopleFromData(s.val() || {}); });
                 playNotif();
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                // تحديث شارة "رسالة جديدة" على كارد المرسل
-                let senderCard = document.querySelector('[data-uid="' + msg.from + '"]');
-                if (senderCard && !senderCard.classList.contains('has-unread')) {
-                    senderCard.classList.add('has-unread');
-                    let nameEl = senderCard.querySelector('.person-name');
-                    if (nameEl && !nameEl.querySelector('.new-msg-badge')) {
-                        nameEl.innerHTML += ' <span class="new-msg-badge">رسالة جديدة</span>';
-                    }
-                }
             }
-            // نحذف فقط بعد النجاح
-            snap.ref.remove();
-        } catch(e) {
-            // لو فشل العرض — ما نحذف الرسالة عشان ما تضيع
         }
+
+        snap.ref.remove();
     });
 
     document.getElementById('backToLanding').onclick = () => {
         cleanup();
-        localStorage.removeItem('jeerani_name');
+        localStorage.removeItem('jiranak_name');
         initLanding();
     };
 
@@ -755,7 +543,7 @@ function enterPeopleScreen() {
             onConfirm: (val) => {
                 if (val.length > 0 && val.length <= 20) {
                     myName = val;
-                    localStorage.setItem('jeerani_name', myName);
+                    localStorage.setItem('jiranak_name', myName);
                     document.getElementById('myName').textContent = myName;
                     myPresenceRef.update({ name: myName });
                 }
@@ -764,7 +552,7 @@ function enterPeopleScreen() {
     };
 
     // زر إلغاء الحظر
-    let unblockBtn = document.getElementById('unblockBtn');
+    var unblockBtn = document.getElementById('unblockBtn');
     if (blockedUsers.size > 0) {
         unblockBtn.style.display = 'inline-flex';
         unblockBtn.textContent = '🔓 إلغاء الحظر (' + blockedUsers.size + ')';
@@ -778,7 +566,7 @@ function enterPeopleScreen() {
             confirmText: 'إلغاء الحظر',
             onConfirm: () => {
                 blockedUsers.clear();
-                localStorage.setItem('jeerani_blocked', '[]');
+                localStorage.setItem('jiranak_blocked', '[]');
                 unblockBtn.style.display = 'none';
                 presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
             }
@@ -788,22 +576,21 @@ function enterPeopleScreen() {
     document.getElementById('shareBtn')?.addEventListener('click', shareLink);
 }
 
-/** رسم قائمة الجيران — فلترة وترتيب وعرض بطاقات المستخدمين */
 function renderPeopleFromData(data) {
-    let list = document.getElementById('peopleList');
-    let noPeople = document.getElementById('noPeople');
-    let count = document.getElementById('onlineCount');
+    var list = document.getElementById('peopleList');
+    var noPeople = document.getElementById('noPeople');
+    var count = document.getElementById('onlineCount');
 
-    let allUsers = [];
+    var allUsers = [];
     Object.entries(data).forEach(function(entry) {
-        let id = entry[0], u = entry[1];
+        var id = entry[0], u = entry[1];
         if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
             u.id = id;
-            if (myLat && u.lat && u.lng) {
+            // حساب المسافة لكل مستخدم
+            if (myGpsReady && u.lat && u.lng) {
                 u._dist = getDistance(u.lat, u.lng);
-                if (u._dist > 100) return; // أبعد من 100 كم = مو جارك
             } else {
-                u._dist = 99999;
+                u._dist = 99999; // بدون GPS → يروح آخر القائمة
             }
             allUsers.push(u);
         }
@@ -815,12 +602,22 @@ function renderPeopleFromData(data) {
     // النظام الذكي التدريجي:
     // معادلة سلسة: كل ما زاد مستخدم، ينقص العدد المعروض بشكل تدريجي
     // maxShow = 20 عند 1 مستخدم، ينزل تدريجياً لـ 8 عند 200+ مستخدم
-    let total = allUsers.length;
-    let maxShow = Math.max(8, Math.round(20 - (total * 0.06)));
+    var total = allUsers.length;
+    var maxShow = Math.max(8, Math.round(20 - (total * 0.06)));
     if (total <= 5) maxShow = total;
 
-    let users;
-    users = allUsers.slice(0, maxShow);
+    var users;
+    if (!myGpsReady) {
+        // GPS لم يجهز → ننتظر بدل ما نعرض ناس من مدن بعيدة
+        count.textContent = '⏳ جاري تحديد موقعك...';
+        list.style.display = 'none';
+        noPeople.style.display = 'none';
+        return;
+    } else {
+        // فلتر: أبعد شخص معروض لازم يكون ضمن 100 كم
+        var nearby = allUsers.filter(function(u) { return u._dist <= 100; });
+        users = nearby.slice(0, maxShow);
+    }
 
     if (users.length === 0) {
         count.textContent = 'لا يوجد أحد قريب';
@@ -835,10 +632,10 @@ function renderPeopleFromData(data) {
     noPeople.style.display = 'none';
 
     list.innerHTML = users.map((u, i) => {
-        let distText = formatDistance(u.lat, u.lng, u.acc);
-        let hasUnread = unreadFrom.has(u.id);
+        var distText = formatDistance(u.lat, u.lng);
+        var hasUnread = unreadFrom.has(u.id);
         return `
-            <div class="person-card ${hasUnread ? 'has-unread' : ''}" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat || ''}" data-ulng="${u.lng || ''}">
+            <div class="person-card ${hasUnread ? 'has-unread' : ''}" style="animation-delay:${i*0.08}s" data-uid="${u.id}" data-uname="${esc(u.name)}" data-ulat="${u.lat}" data-ulng="${u.lng}">
                 <div class="person-avatar" style="background:${getGradient(u.id)}">
                     ${getAvatar(u.id)}
                     ${hasUnread ? '<span class="unread-dot"></span>' : ''}
@@ -854,13 +651,12 @@ function renderPeopleFromData(data) {
     // ربط الأحداث بأمان
     list.querySelectorAll('.person-card').forEach(card => {
         card.onclick = () => {
-            startChat(card.dataset.uid, card.dataset.uname, parseFloat(card.dataset.ulat) || 0, parseFloat(card.dataset.ulng) || 0);
+            startChat(card.dataset.uid, card.dataset.uname, parseFloat(card.dataset.ulat), parseFloat(card.dataset.ulng));
         };
     });
 }
 
 // ========== SCREEN 3: Chat ==========
-/** فتح شاشة الدردشة مع مستخدم محدد */
 function startChat(userId, userName, uLat, uLng) {
     unreadFrom.delete(userId);
     currentChatUser = { id: userId, name: userName, lat: uLat, lng: uLng };
@@ -872,9 +668,9 @@ function startChat(userId, userName, uLat, uLng) {
     document.getElementById('chatWith').textContent = userName;
     document.getElementById('chatDistance').textContent = formatDistance(uLat, uLng);
 
-    let msgsDiv = document.getElementById('chatMessages');
+    var msgsDiv = document.getElementById('chatMessages');
     msgsDiv.innerHTML = '';
-    let scrollBtn = document.getElementById('scrollDownBtn');
+    var scrollBtn = document.getElementById('scrollDownBtn');
     if (scrollBtn) scrollBtn.style.display = 'none';
     msgsDiv.onscroll = function() {
         if (msgsDiv.scrollHeight - msgsDiv.scrollTop - msgsDiv.clientHeight < 80) {
@@ -893,13 +689,13 @@ function startChat(userId, userName, uLat, uLng) {
     if (partnerPresenceRef) partnerPresenceRef.off();
     partnerPresenceRef = db.ref('online/' + userId);
     partnerPresenceRef.on('value', (snap) => {
-        let statusEl = document.getElementById('chatDistance');
-        let nameEl = document.getElementById('chatWith');
+        var statusEl = document.getElementById('chatDistance');
+        var nameEl = document.getElementById('chatWith');
         if (snap.exists()) {
-            let data = snap.val();
+            var data = snap.val();
             // تحديث الاسم إذا تغيّر
             if (data.name && data.name !== nameEl.textContent) {
-                let oldName = nameEl.textContent;
+                var oldName = nameEl.textContent;
                 nameEl.textContent = data.name;
                 currentChatUser.name = data.name;
                 addSystemMsg('غيّر اسمه إلى: ' + data.name);
@@ -907,15 +703,11 @@ function startChat(userId, userName, uLat, uLng) {
             statusEl.textContent = formatDistance(data.lat, data.lng);
             statusEl.style.color = '';
             partnerWasOnline = true;
-            if (window._partnerLeftTimer) { clearTimeout(window._partnerLeftTimer); window._partnerLeftTimer = null; }
         } else if (partnerWasOnline) {
-            // ننتظر 30 ثانية — ممكن بس قفل الشاشة ويرجع
-            window._partnerLeftTimer = setTimeout(function() {
-                statusEl.textContent = '⚫ غير متصل';
-                statusEl.style.color = '#e17055';
-                addSystemMsg('الطرف الثاني غادر المحادثة');
-                partnerWasOnline = false;
-            }, 30000);
+            statusEl.textContent = '⚫ غير متصل';
+            statusEl.style.color = '#e17055';
+            addSystemMsg('الطرف الثاني غادر المحادثة');
+            partnerWasOnline = false;
         }
     });
 
@@ -927,12 +719,7 @@ function startChat(userId, userName, uLat, uLng) {
             confirmText: 'حظر',
             onConfirm: () => {
                 blockedUsers.add(userId);
-                localStorage.setItem('jeerani_blocked', JSON.stringify([...blockedUsers]));
-                // إبلاغ الطرف الثاني بالحظر
-                db.ref('msgs/' + userId).push({
-                    from: myId, name: '🚫', text: '🚫 تم حظرك — لن تصل رسائلك بعد الآن',
-                    t: firebase.database.ServerValue.TIMESTAMP, system: true
-                });
+                localStorage.setItem('jiranak_blocked', JSON.stringify([...blockedUsers]));
                 if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
                 currentChatUser = null;
                 currentScreen = 'people';
@@ -942,9 +729,9 @@ function startChat(userId, userName, uLat, uLng) {
     };
 
     // مؤشر "يكتب..."
-    let myTypingRef = db.ref('typing/' + userId + '/' + myId);
-    let partnerTypingRef2 = db.ref('typing/' + myId + '/' + userId);
-    let typingIndicator = document.getElementById('typingIndicator');
+    var myTypingRef = db.ref('typing/' + userId + '/' + myId);
+    var partnerTypingRef2 = db.ref('typing/' + myId + '/' + userId);
+    var typingIndicator = document.getElementById('typingIndicator');
     myTypingRef.onDisconnect().remove();
 
     partnerTypingRef2.on('value', function(snap) {
@@ -978,14 +765,10 @@ function startChat(userId, userName, uLat, uLng) {
     const sendBtn = document.getElementById('sendBtn');
 
     const sendMsg = () => {
-        let el = document.getElementById('msgInput');
-        let text = el.value.trim();
+        var el = document.getElementById('msgInput');
+        var text = el.value.trim();
         if (!text || text.length > 500) return;
-        if (/https?:\/\/|www\.|\.com|\.net|\.org|\.io/i.test(text)) {
-            addSystemMsg('⚠️ إرسال الروابط غير مسموح');
-            return;
-        }
-        let now = Date.now();
+        var now = Date.now();
         // حد 500ms بين كل رسالة
         if (now - lastMsgTime < 500) {
             sendBtn.style.opacity = '0.5';
@@ -1014,8 +797,16 @@ function startChat(userId, userName, uLat, uLng) {
         db.ref('typing/' + userId + '/' + myId).set(null);
         clearTimeout(typingTimeout);
 
+        // timeout: لو Firebase ما رد خلال 10 ثواني = فشل
+        var sendTimeout = setTimeout(function() {
+            var msgEl = document.getElementById(thisMsgId);
+            if (msgEl) {
+                var tick = msgEl.querySelector('.msg-tick');
+                if (tick && tick.textContent === '⏳') tick.textContent = '❌';
+            }
+        }, 10000);
 
-        let msgData = {
+        var msgData = {
             from: myId,
             fromName: myName,
             to: userId,
@@ -1024,22 +815,28 @@ function startChat(userId, userName, uLat, uLng) {
             t: firebase.database.ServerValue.TIMESTAMP
         };
 
-        // إرسال الرسالة — العلامة مربوطة بالإرسال مو السجل
+        // إرسال + حفظ نسخة في السجل
         db.ref('msgs/' + userId).push({
             from: myId,
             name: myName,
             text: text,
             t: firebase.database.ServerValue.TIMESTAMP
-        }).then(function() {
-            let msgEl = document.getElementById(thisMsgId);
+        });
+        db.ref('logs').push(msgData).then(function() {
+            clearTimeout(sendTimeout);
+            var msgEl = document.getElementById(thisMsgId);
             if (msgEl) {
-                let tick = msgEl.querySelector('.msg-tick');
+                var tick = msgEl.querySelector('.msg-tick');
                 if (tick) tick.textContent = '✓';
             }
         }).catch(function() {
+            clearTimeout(sendTimeout);
+            var msgEl = document.getElementById(thisMsgId);
+            if (msgEl) {
+                var tick = msgEl.querySelector('.msg-tick');
+                if (tick) tick.textContent = '❌';
+            }
         });
-        // حفظ نسخة بالسجل بالخلفية
-        db.ref('logs').push(msgData).catch(function() {});
     };
 
     sendBtn.onclick = sendMsg;
@@ -1049,30 +846,31 @@ function startChat(userId, userName, uLat, uLng) {
     document.getElementById('backToPeople').onclick = leaveChat;
 }
 
-/** حفظ رسالة في سجل المحادثات المحلي */
 function saveToHistory(userId, text, isMe) {
     if (!chatHistory.has(userId)) chatHistory.set(userId, []);
-    let h = chatHistory.get(userId);
+    var h = chatHistory.get(userId);
     h.push({ text, isMe });
     if (h.length > MAX_HISTORY_PER_USER) h.shift();
     persistChatHistory();
 }
-/** إضافة فقاعة رسالة جديدة في شاشة الدردشة */
+
+function linkify(text) {
+    var escaped = esc(text);
+    return escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:#81ecec;text-decoration:underline">$1</a>');
+}
+
 function addMsg(text, isMe, delivered = true, msgId = null) {
-    let msgs = document.getElementById('chatMessages');
-    let div = document.createElement('div');
+    var msgs = document.getElementById('chatMessages');
+    var div = document.createElement('div');
     if (msgId) div.id = msgId;
-    let now = new Date();
-    let h = now.getHours();
-    let ampm = h >= 12 ? 'م' : 'ص';
-    h = h % 12 || 12;
-    let time = h + ':' + now.getMinutes().toString().padStart(2,'0') + ' ' + ampm;
+    var now = new Date();
+    var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
     div.className = 'msg ' + (isMe ? 'msg-me' : 'msg-them');
-    let tick = isMe ? '<span class="msg-tick">' + (delivered ? '✓' : '⏳') + '</span>' : '';
-    div.innerHTML = esc(text) + '<span class="msg-time">' + time + ' ' + tick + '</span>';
+    var tick = isMe ? '<span class="msg-tick">' + (delivered ? '✓' : '⏳') + '</span>' : '';
+    div.innerHTML = linkify(text) + '<span class="msg-time">' + time + ' ' + tick + '</span>';
 
     // لا تسحب للأسفل إذا المستخدم يقرأ رسائل قديمة
-    let isAtBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 80;
+    var isAtBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 80;
     msgs.appendChild(div);
     if (isAtBottom || isMe) {
         msgs.scrollTop = msgs.scrollHeight;
@@ -1081,13 +879,11 @@ function addMsg(text, isMe, delivered = true, msgId = null) {
     }
 }
 
-/** إظهار زر 'رسائل جديدة ↓' عند وصول رسالة والمستخدم بالأعلى */
 function showNewMsgButton() {
-    let btn = document.getElementById('scrollDownBtn');
+    var btn = document.getElementById('scrollDownBtn');
     if (btn) btn.style.display = 'flex';
 }
 
-/** إضافة رسالة نظام (مثل: غادر المحادثة، غيّر اسمه) */
 function addSystemMsg(text) {
     const msgs = document.getElementById('chatMessages');
     const div = document.createElement('div');
@@ -1095,22 +891,10 @@ function addSystemMsg(text) {
     div.textContent = text;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
-
-    // حفظ الإشعار في السجل للوحة التحكم
-    if (currentChatUser) {
-        db.ref('logs').push({
-            from: myId, fromName: myName,
-            to: currentChatUser.id, toName: currentChatUser.name,
-            text: '📌 ' + text,
-            t: firebase.database.ServerValue.TIMESTAMP,
-            system: true
-        }).catch(function() {});
-    }
 }
 
 // ========== زر الرجوع في المتصفح ==========
 // دالة موحدة للخروج من الدردشة
-/** الخروج من الدردشة — تنظيف listeners والعودة لصفحة الجيران */
 function leaveChat() {
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
     // تنظيف typing
@@ -1134,13 +918,11 @@ window.addEventListener('popstate', (e) => {
 });
 
 // ========== المساعدات ==========
-/** التبديل بين الشاشات (landing/people/chat) */
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 }
 
-/** حساب المسافة بالكيلومتر بين نقطتين (صيغة Haversine) */
 function getDistance(lat2, lng2) {
     if (lat2 == null || lng2 == null || isNaN(lat2) || isNaN(lng2)) return Infinity;
     const R = 6371;
@@ -1150,14 +932,12 @@ function getDistance(lat2, lng2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-/** تنظيف النص من HTML لمنع XSS */
 function esc(text) {
     const d = document.createElement('div');
     d.textContent = text;
     return d.innerHTML;
 }
 
-/** مشاركة رابط الموقع عبر Web Share API أو نسخ للحافظة */
 function shareLink() {
     const url = window.location.href;
     if (navigator.share) {
@@ -1173,17 +953,13 @@ function shareLink() {
     }
 }
 
-/** تنظيف شامل — إزالة كل listeners وintervals ومراجع Firebase */
 function cleanup() {
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
     if (myPresenceRef) { myPresenceRef.remove(); myPresenceRef = null; }
     if (presenceRef) { presenceRef.off(); presenceRef = null; }
-    db.ref('msgs/' + myId).off();
+    if (msgListener) { db.ref('msgs/' + myId).off(); msgListener = null; }
     if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
-    if (gpsPollInterval) { clearInterval(gpsPollInterval); gpsPollInterval = null; }
-    if (window._gpsWatchId) { navigator.geolocation.clearWatch(window._gpsWatchId); window._gpsWatchId = null; }
-    window._gpsStarted = false;
-    _intervals.forEach(clearInterval); _intervals.length = 0;
+    if (geoWatchId !== null) { navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
     unreadFrom.clear();
     currentChatUser = null;
 }
@@ -1192,43 +968,10 @@ window.addEventListener('beforeunload', cleanup);
 
 // كشف تبويب مكرر
 window.addEventListener('storage', function(e) {
-    if (e.key === 'jeerani_active_tab') {
+    if (e.key === 'jiranak_active_tab') {
         // تبويب ثاني فتح — أوقف هذا التبويب
         cleanup();
-        document.body.innerHTML = '<div style="padding:60px 20px;text-align:center;color:white;font-family:Cairo,sans-serif;direction:rtl"><h2>⚠️ مفتوح في تبويب آخر</h2><p style="color:#7f7f9a;margin-top:12px">أغلق هذا التبويب واستخدم التبويب الآخر</p><button onclick="localStorage.setItem(\'jeerani_active_tab\',Date.now());location.reload()" style="margin-top:24px;padding:12px 32px;border-radius:14px;border:none;background:#6c5ce7;color:white;font-size:16px;font-family:Cairo;cursor:pointer">استخدم هنا بدلاً</button></div>';
+        document.body.innerHTML = '<div style="padding:60px 20px;text-align:center;color:white;font-family:Cairo,sans-serif;direction:rtl"><h2>⚠️ مفتوح في تبويب آخر</h2><p style="color:#7f7f9a;margin-top:12px">أغلق هذا التبويب واستخدم التبويب الآخر</p><button onclick="localStorage.setItem(\'jiranak_active_tab\',Date.now());location.reload()" style="margin-top:24px;padding:12px 32px;border-radius:14px;border:none;background:#6c5ce7;color:white;font-size:16px;font-family:Cairo;cursor:pointer">استخدم هنا بدلاً</button></div>';
     }
 });
-localStorage.setItem('jeerani_active_tab', Date.now());
-
-// ========== PUSH NOTIFICATIONS ==========
-/** تفعيل إشعارات Push — تعمل حتى لو المتصفح مغلق */
-function initPushNotifications() {
-    if (!('serviceWorker' in navigator) || !firebase.messaging) return;
-
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then(function(registration) {
-            const messaging = firebase.messaging();
-
-            // طلب إذن الإشعارات
-            Notification.requestPermission().then(function(permission) {
-                if (permission === 'granted') {
-                    // الحصول على توكن الإشعارات
-                    messaging.getToken({
-                        vapidKey: 'BJ6XT1ujS2fZS5tcNjm6onCyd2_QkxrWU-OiLnZDLt60USscef8oNGgJ573epRI_HVJJNLhioS27zPeNQ0SPquQ',
-                        serviceWorkerRegistration: registration
-                    }).then(function(token) {
-                        if (token && myPresenceRef) {
-                            // حفظ التوكن في Firebase عشان نقدر نرسل إشعارات
-                            myPresenceRef.update({ pushToken: token });
-                        }
-                    }).catch(function() {});
-
-                    // إشعارات وأنت داخل الموقع
-                    messaging.onMessage(function(payload) {
-                        // لو الموقع مفتوح — الصوت يكفي (ما نحتاج إشعار)
-                    });
-                }
-            });
-        }).catch(function() {});
-}
-// Jeerani v4.0 - Final Review
+localStorage.setItem('jiranak_active_tab', Date.now());

@@ -9,16 +9,14 @@
         :root { --p:#6c5ce7; --a:#00cec9; --d:#0a0a0f; --d2:#12121a; --d3:#1a1a2e; --d4:#252540; --t:#e8e8f0; --m:#7f7f9a; --b:rgba(255,255,255,0.07); --r:#e17055; }
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Cairo',sans-serif; background:var(--d); color:var(--t); min-height:100vh; }
-        .login { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:14px; padding:16px; }
+        .login { display:flex; align-items:center; justify-content:center; height:100vh; padding:16px; }
         .login-frame { background:var(--d2); border:1px solid var(--b); border-radius:24px; padding:40px 36px 32px; display:flex; flex-direction:column; align-items:center; gap:14px; box-shadow:0 16px 60px rgba(0,0,0,0.5); width:min(90vw, 380px); }
-        .login-logo { font-family:'Poppins'; font-size:28px; font-weight:800; color:#fff; letter-spacing:2px; }
-        .login input { padding:14px 20px; border-radius:14px; border:2px solid var(--b); background:var(--d2); color:var(--t); font-family:'Cairo'; font-size:16px; width:100%; text-align:center; outline:none; }
+        .login input { padding:14px 20px; border-radius:14px; border:2px solid var(--b); background:var(--d3); color:var(--t); font-family:'Cairo'; font-size:16px; width:100%; text-align:center; outline:none; }
         .login input:focus { border-color:var(--p); }
-        .login button { padding:12px 36px; border-radius:14px; border:none; background:var(--p); color:#fff; font-family:'Cairo'; font-size:15px; font-weight:700; cursor:pointer; }
+        .login button { padding:12px 36px; border-radius:14px; border:none; background:var(--p); color:#fff; font-family:'Cairo'; font-size:15px; font-weight:700; cursor:pointer; width:100%; }
         .app { display:none; }
         .top { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--d2); border-bottom:1px solid var(--b); position:sticky; top:0; z-index:10; }
         .top-title { font-family:'Poppins'; font-weight:800; font-size:16px; }
-        .top-actions { display:flex; gap:6px; }
         .btn { padding:6px 14px; border-radius:8px; border:1px solid var(--b); background:var(--d3); color:var(--t); font-family:'Cairo'; cursor:pointer; font-size:11px; }
         .btn:hover { background:var(--d4); }
         .content { max-width:700px; margin:0 auto; padding:12px; }
@@ -44,19 +42,17 @@
         .preview { font-size:11px; color:var(--m); margin-top:2px; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .system-msg { color:var(--a); font-style:italic; }
         .chat-top { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--d2); border-bottom:1px solid var(--b); }
-        .chat-area { padding:12px; max-height:60vh; overflow-y:auto; display:flex; flex-direction:column; gap:5px; }
+        .chat-area { padding:12px; max-height:70vh; overflow-y:auto; display:flex; flex-direction:column; gap:5px; }
         .msg { max-width:80%; padding:7px 11px 3px; border-radius:12px; font-size:12px; line-height:1.5; }
         .msg-r { align-self:flex-start; background:var(--p); color:#fff; border-bottom-right-radius:3px; }
         .msg-l { align-self:flex-end; background:var(--d4); border-bottom-left-radius:3px; }
         .msg-s { align-self:center; color:var(--a); font-size:11px; font-style:italic; }
         .msg small { font-size:9px; opacity:0.5; display:block; text-align:left; }
         .msg .sender { font-size:9px; font-weight:700; opacity:0.6; margin-bottom:1px; }
-        .row { display:flex; gap:10px; padding:7px 14px; border-bottom:1px solid rgba(255,255,255,0.03); font-size:11px; align-items:center; }
-        .row:last-child { border:none; }
-        .col-from { width:70px; font-weight:700; color:var(--a); flex-shrink:0; }
-        .col-to { width:70px; font-weight:700; color:var(--p); flex-shrink:0; }
-        .col-text { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .col-time { width:60px; color:var(--m); font-size:9px; text-align:left; flex-shrink:0; }
+        .highlight { background:rgba(108,92,231,0.3); border-radius:3px; padding:0 2px; }
+        .nav-arrows { display:flex; gap:6px; align-items:center; }
+        .nav-arrows button { background:var(--d3); border:1px solid var(--b); color:var(--t); border-radius:6px; padding:2px 8px; cursor:pointer; font-size:12px; }
+        .nav-arrows span { font-size:10px; color:var(--m); }
         .empty { text-align:center; color:var(--m); padding:30px 14px; font-size:13px; }
         .panel { display:none; }
         .panel.active { display:block; }
@@ -77,7 +73,7 @@
 <div class="app" id="app">
     <div class="top">
         <div class="top-title">Jeerani Admin</div>
-        <div class="top-actions">
+        <div style="display:flex;gap:6px">
             <button class="btn" onclick="load()">🔄</button>
             <button class="btn" id="liveBtn" onclick="toggleLive()">📡 مباشر</button>
         </div>
@@ -86,19 +82,17 @@
         <div class="stats">
             <div class="stat"><b id="sOn">0</b><span>متصل</span></div>
             <div class="stat"><b id="sCo">0</b><span>محادثة</span></div>
-            <div class="stat"><b id="sMs">0</b><span>رسالة</span></div>
+            <div class="stat"><b id="sBn">0</b><span>محظور</span></div>
         </div>
-        <input class="search" id="searchBox" placeholder="🔍 بحث بالاسم أو النص..." oninput="filterAll()">
+        <input class="search" id="searchBox" placeholder="🔍 بحث في المحادثات..." oninput="searchConvs()">
         <div class="tabs">
             <div class="tab active" data-tab="online">👥 المتصلين</div>
             <div class="tab" data-tab="convs">💬 المحادثات</div>
-            <div class="tab" data-tab="msgs">📝 السجل</div>
             <div class="tab" data-tab="banned">🚫 المحظورين</div>
         </div>
         <div id="p-online" class="panel active"></div>
         <div id="p-convs" class="panel"></div>
         <div id="p-chat" class="panel"></div>
-        <div id="p-msgs" class="panel"></div>
         <div id="p-banned" class="panel"></div>
     </div>
 </div>
@@ -107,7 +101,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
 <script>
 const PASS = 'Mm123';
-let logs = [], convs = {}, live = false, liveRef = null;
+let logs = [], convs = {}, live = false, liveRef = null, searchQuery = '', chatHighlights = [];
 
 firebase.initializeApp({
     apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
@@ -149,64 +143,48 @@ function fmt(t) {
     if (!t) return '';
     return new Date(t).toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit', hour12:true});
 }
-
 function fmtFull(t) {
     if (!t) return '';
-    const d = new Date(t);
-    return d.toLocaleDateString('ar', {day:'numeric', month:'short'}) + ' ' + fmt(t);
+    return new Date(t).toLocaleDateString('ar', {day:'numeric', month:'short'}) + ' ' + fmt(t);
 }
-
 function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
 function banUser(uid, name) {
-    if (!confirm('حظر ' + name + '؟\nسيتم حذفه من القائمة وإرسال إشعار له.')) return;
-    // حذف من online
+    if (!confirm('حظر ' + name + '؟')) return;
     db.ref('online/' + uid).remove();
-    // إرسال إشعار حظر
-    db.ref('msgs/' + uid).push({
-        from: 'admin', name: '🚫 الإدارة', text: '🚫 تم حظرك من قبل الإدارة',
-        t: firebase.database.ServerValue.TIMESTAMP, system: true
-    });
-    // حفظ في قائمة المحظورين
-    db.ref('banned/' + uid).set({ name: name, t: firebase.database.ServerValue.TIMESTAMP });
-}
-
-function unbanUser(uid) {
-    db.ref('banned/' + uid).remove();
+    db.ref('msgs/' + uid).push({ from:'admin', name:'🚫', text:'🚫 تم حظرك من قبل الإدارة', t:firebase.database.ServerValue.TIMESTAMP, system:true });
+    db.ref('banned/' + uid).set({ name:name, t:firebase.database.ServerValue.TIMESTAMP });
     load();
 }
+function unbanUser(uid) { db.ref('banned/' + uid).remove(); load(); }
 
-function filterAll() {
-    const q = document.getElementById('searchBox').value.trim().toLowerCase();
-    // فلتر المتصلين
-    document.querySelectorAll('#p-online .item').forEach(el => {
-        el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-    // فلتر المحادثات
-    document.querySelectorAll('#p-convs .card').forEach(el => {
-        el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-    // فلتر السجل
-    document.querySelectorAll('#p-msgs .row').forEach(el => {
-        el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+function searchConvs() {
+    searchQuery = document.getElementById('searchBox').value.trim().toLowerCase();
+    renderConvs();
+}
+
+function highlightText(text, query) {
+    if (!query) return esc(text);
+    const escaped = esc(text);
+    const regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return escaped.replace(regex, '<span class="highlight">$1</span>');
 }
 
 function load() {
-    // المتصلين (لحظي)
+    // المتصلين
     db.ref('online').on('value', snap => {
         const data = snap.val() || {};
         const users = Object.entries(data);
         document.getElementById('sOn').textContent = users.length;
         let h = '<div class="card">';
-        if (!users.length) {
-            h += '<div class="empty">لا يوجد أحد</div>';
-        } else {
+        if (!users.length) { h += '<div class="empty">لا يوجد أحد</div>'; }
+        else {
             users.forEach(([id, u]) => {
-                h += '<div class="item"><div><span class="name">' + esc(u.name || '—') + '</span><span class="dot"></span>';
-                if (u.acc) h += '<span style="font-size:9px;color:var(--m);margin-right:6px">GPS: ' + Math.round(u.acc) + 'm</span>';
-                h += '<div class="id">' + id.slice(0, 14) + '</div></div>';
-                h += '<div style="display:flex;gap:6px;align-items:center"><span class="time">' + fmt(u.t) + '</span><button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + id + '" data-name="' + esc(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div></div>';
+                h += '<div class="item"><div><span class="name">' + esc(u.name||'—') + '</span><span class="dot"></span>';
+                if (u.acc) h += '<span style="font-size:9px;color:var(--m);margin-right:6px">' + Math.round(u.acc) + 'm</span>';
+                h += '<div class="id">' + id.slice(0,14) + '</div></div>';
+                h += '<div style="display:flex;gap:6px;align-items:center"><span class="time">' + fmt(u.t) + '</span>';
+                h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + id + '" data-name="' + esc(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div></div>';
             });
         }
         h += '</div>';
@@ -214,81 +192,70 @@ function load() {
     });
 
     // المحظورين
-    db.ref('banned').once('value', snap => {
+    db.ref('banned').on('value', snap => {
         const data = snap.val() || {};
         const list = Object.entries(data);
-        let bh = '<div class="card">';
-        if (!list.length) {
-            bh += '<div class="empty">لا يوجد محظورين</div>';
-        } else {
+        document.getElementById('sBn').textContent = list.length;
+        let h = '<div class="card">';
+        if (!list.length) { h += '<div class="empty">لا يوجد محظورين</div>'; }
+        else {
             list.forEach(([uid, u]) => {
-                bh += '<div class="item"><div><span class="name">' + esc(u.name || uid.slice(0,14)) + '</span>';
-                bh += '<div class="id">' + uid.slice(0,14) + '</div></div>';
-                bh += '<button class="btn" style="font-size:10px;padding:3px 10px;color:var(--a);border-color:var(--a)" onclick="unbanUser(\'' + uid + '\')">إلغاء الحظر</button></div>';
+                h += '<div class="item"><div><span class="name">' + esc(u.name||uid.slice(0,14)) + '</span>';
+                h += '<div class="id">' + uid.slice(0,14) + '</div></div>';
+                h += '<button class="btn" style="font-size:10px;padding:3px 10px;color:var(--a);border-color:var(--a)" data-uid="' + uid + '" onclick="unbanUser(this.dataset.uid)">إلغاء ❎</button></div>';
             });
         }
-        bh += '</div>';
-        document.getElementById('p-banned').innerHTML = bh;
+        h += '</div>';
+        document.getElementById('p-banned').innerHTML = h;
     });
 
-    // السجل + المحادثات
+    // المحادثات
     db.ref('logs').orderByChild('t').limitToLast(500).once('value', snap => {
         const data = snap.val() || {};
-        logs = Object.values(data).sort((a, b) => (b.t || 0) - (a.t || 0));
-        document.getElementById('sMs').textContent = logs.length;
+        logs = Object.values(data).sort((a, b) => (b.t||0) - (a.t||0));
+        document.getElementById('sCo').textContent = '...';
 
-        // السجل
-        let mh = '<div class="card">';
-        if (!logs.length) {
-            mh += '<div class="empty">لا توجد رسائل</div>';
-        } else {
-            logs.slice(0, 200).forEach(m => {
-                const cls = m.system ? ' system-msg' : '';
-                mh += '<div class="row"><div class="col-from">' + esc(m.fromName || '—') + '</div>';
-                mh += '<div class="col-to">' + esc(m.toName || '—') + '</div>';
-                mh += '<div class="col-text' + cls + '">' + esc(m.text || '') + '</div>';
-                mh += '<div class="col-time">' + fmt(m.t) + '</div></div>';
-            });
-        }
-        mh += '</div>';
-        document.getElementById('p-msgs').innerHTML = mh;
-
-        // تجميع المحادثات
         convs = {};
         logs.forEach(m => {
             if (!m.from || !m.to) return;
             const pair = [m.from, m.to].sort().join('_');
-            if (!convs[pair]) convs[pair] = { users: {}, msgs: [], lastTime: 0, lastText: '', hasSystem: false };
+            if (!convs[pair]) convs[pair] = { users:{}, msgs:[], lastTime:0, lastText:'' };
             convs[pair].users[m.from] = m.fromName;
             convs[pair].users[m.to] = m.toName;
             convs[pair].msgs.push(m);
-            if ((m.t || 0) > convs[pair].lastTime) {
-                convs[pair].lastTime = m.t;
-                convs[pair].lastText = m.text;
-            }
-            if (m.system) convs[pair].hasSystem = true;
+            if ((m.t||0) > convs[pair].lastTime) { convs[pair].lastTime = m.t; convs[pair].lastText = m.text; }
         });
-
-        const arr = Object.entries(convs).sort((a, b) => b[1].lastTime - a[1].lastTime);
-        document.getElementById('sCo').textContent = arr.length;
-
-        let ch = '';
-        if (!arr.length) {
-            ch = '<div class="card"><div class="empty">لا توجد محادثات</div></div>';
-        } else {
-            arr.forEach(([key, c]) => {
-                const names = Object.values(c.users).filter(Boolean);
-                const textCls = c.lastText && c.lastText.startsWith('📌') ? ' system-msg' : '';
-                ch += '<div class="card"><div class="item conv" onclick="openConv(\'' + key + '\')">';
-                ch += '<div><div class="name">' + esc(names.join(' ↔ ')) + '</div>';
-                ch += '<div class="preview' + textCls + '">' + esc(c.lastText || '') + '</div>';
-                ch += '<div class="time">' + fmtFull(c.lastTime) + '</div></div>';
-                ch += '<div class="badge">' + c.msgs.length + '</div>';
-                ch += '</div></div>';
-            });
-        }
-        document.getElementById('p-convs').innerHTML = ch;
+        renderConvs();
     });
+}
+
+function renderConvs() {
+    const arr = Object.entries(convs).sort((a, b) => b[1].lastTime - a[1].lastTime);
+    let filtered = arr;
+    if (searchQuery) {
+        filtered = arr.filter(([k, c]) => {
+            const names = Object.values(c.users).filter(Boolean).join(' ').toLowerCase();
+            const hasName = names.includes(searchQuery);
+            const hasText = c.msgs.some(m => (m.text||'').toLowerCase().includes(searchQuery));
+            return hasName || hasText;
+        });
+    }
+    document.getElementById('sCo').textContent = filtered.length;
+
+    let ch = '';
+    if (!filtered.length) { ch = '<div class="card"><div class="empty">' + (searchQuery ? 'لا توجد نتائج لـ "' + esc(searchQuery) + '"' : 'لا توجد محادثات') + '</div></div>'; }
+    else {
+        filtered.forEach(([key, c]) => {
+            const names = Object.values(c.users).filter(Boolean);
+            const textCls = c.lastText && c.lastText.startsWith('📌') ? ' system-msg' : '';
+            ch += '<div class="card"><div class="item conv" onclick="openConv(\'' + key + '\')">';
+            ch += '<div><div class="name">' + esc(names.join(' ↔ ')) + '</div>';
+            ch += '<div class="preview' + textCls + '">' + esc(c.lastText||'') + '</div>';
+            ch += '<div class="time">' + fmtFull(c.lastTime) + '</div></div>';
+            ch += '<div class="badge">' + c.msgs.length + '</div></div></div>';
+        });
+    }
+    document.getElementById('p-convs').innerHTML = ch;
 }
 
 function openConv(key) {
@@ -299,24 +266,61 @@ function openConv(key) {
     document.getElementById('p-chat').classList.add('active');
 
     const names = Object.values(c.users).filter(Boolean);
-    const msgs = c.msgs.sort((a, b) => (a.t || 0) - (b.t || 0));
+    const msgs = c.msgs.sort((a, b) => (a.t||0) - (b.t||0));
     const first = msgs[0] ? msgs[0].from : '';
 
+    // حساب highlights لو فيه بحث
+    chatHighlights = [];
+    if (searchQuery) {
+        msgs.forEach((m, i) => {
+            if ((m.text||'').toLowerCase().includes(searchQuery)) chatHighlights.push(i);
+        });
+    }
+
     let h = '<div class="card">';
-    h += '<div class="chat-top"><strong>' + esc(names.join(' ↔ ')) + ' (' + msgs.length + ')</strong>';
-    h += '<button class="btn" onclick="backToConvs()">← رجوع</button></div>';
-    h += '<div class="chat-area">';
-    msgs.forEach(m => {
+    h += '<div class="chat-top"><div><strong>' + esc(names.join(' ↔ ')) + '</strong> <span style="font-size:11px;color:var(--m)">(' + msgs.length + ')</span></div>';
+    h += '<div style="display:flex;gap:8px;align-items:center">';
+    if (chatHighlights.length > 0) {
+        h += '<div class="nav-arrows"><button onclick="navHighlight(-1)">▲</button><span id="hlCount">' + chatHighlights.length + ' نتيجة</span><button onclick="navHighlight(1)">▼</button></div>';
+    }
+    h += '<button class="btn" onclick="backToConvs()">← رجوع</button></div></div>';
+    h += '<div class="chat-area" id="chatArea">';
+
+    msgs.forEach((m, i) => {
+        const id = 'msg-' + i;
         if (m.system || (m.text && m.text.startsWith('📌'))) {
-            h += '<div class="msg msg-s">' + esc(m.text || '') + '<small>' + fmt(m.t) + '</small></div>';
+            h += '<div class="msg msg-s" id="' + id + '">' + highlightText(m.text||'', searchQuery) + '<small>' + fmt(m.t) + '</small></div>';
         } else {
             const cls = m.from === first ? 'msg-r' : 'msg-l';
-            h += '<div class="msg ' + cls + '"><div class="sender">' + esc(m.fromName || '—') + '</div>';
-            h += esc(m.text || '') + '<small>' + fmt(m.t) + '</small></div>';
+            h += '<div class="msg ' + cls + '" id="' + id + '"><div class="sender">' + esc(m.fromName||'—') + '</div>';
+            h += highlightText(m.text||'', searchQuery) + '<small>' + fmt(m.t) + '</small></div>';
         }
     });
     h += '</div></div>';
     document.getElementById('p-chat').innerHTML = h;
+
+    // انتقل لأول نتيجة بحث
+    if (chatHighlights.length > 0) {
+        window._hlIndex = 0;
+        setTimeout(() => navHighlight(0), 100);
+    }
+}
+
+window._hlIndex = 0;
+function navHighlight(dir) {
+    if (!chatHighlights.length) return;
+    if (dir !== 0) window._hlIndex += dir;
+    if (window._hlIndex < 0) window._hlIndex = chatHighlights.length - 1;
+    if (window._hlIndex >= chatHighlights.length) window._hlIndex = 0;
+    const msgIdx = chatHighlights[window._hlIndex];
+    const el = document.getElementById('msg-' + msgIdx);
+    if (el) {
+        el.scrollIntoView({ behavior:'smooth', block:'center' });
+        el.style.outline = '2px solid var(--a)';
+        setTimeout(() => el.style.outline = '', 2000);
+    }
+    const counter = document.getElementById('hlCount');
+    if (counter) counter.textContent = (window._hlIndex + 1) + '/' + chatHighlights.length;
 }
 
 function backToConvs() {
