@@ -907,11 +907,15 @@ function startChat(userId, userName, uLat, uLng) {
             statusEl.textContent = formatDistance(data.lat, data.lng);
             statusEl.style.color = '';
             partnerWasOnline = true;
+            if (window._partnerLeftTimer) { clearTimeout(window._partnerLeftTimer); window._partnerLeftTimer = null; }
         } else if (partnerWasOnline) {
-            statusEl.textContent = '⚫ غير متصل';
-            statusEl.style.color = '#e17055';
-            addSystemMsg('الطرف الثاني غادر المحادثة');
-            partnerWasOnline = false;
+            // ننتظر 30 ثانية — ممكن بس قفل الشاشة ويرجع
+            window._partnerLeftTimer = setTimeout(function() {
+                statusEl.textContent = '⚫ غير متصل';
+                statusEl.style.color = '#e17055';
+                addSystemMsg('الطرف الثاني غادر المحادثة');
+                partnerWasOnline = false;
+            }, 30000);
         }
     });
 
