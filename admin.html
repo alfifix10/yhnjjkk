@@ -195,7 +195,7 @@ function loadAll() {
             html += '<div class="empty">لا يوجد أحد متصل</div>';
         } else {
             users.forEach(function(e) {
-                var u = e[1], time = u.t ? new Date(u.t).toLocaleTimeString('ar') : '';
+                var u = e[1], time = u.t ? new Date(u.t).toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit', hour12:true}) : '';
                 html += '<div class="user-item"><div><span class="user-name">' + esc(u.name || '—') + '</span><span class="dot-online"></span>';
                 html += '<div class="user-id">' + e[0].slice(0, 16) + '</div></div>';
                 html += '<div class="user-time">' + time + '</div></div>';
@@ -216,7 +216,7 @@ function loadAll() {
             mhtml += '<div class="empty">لا توجد رسائل</div>';
         } else {
             allLogs.slice(0, 200).forEach(function(m) {
-                var time = m.t ? new Date(m.t).toLocaleTimeString('ar') : '';
+                var time = m.t ? new Date(m.t).toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit', hour12:true}) : '';
                 mhtml += '<div class="msg-row"><div class="msg-col-from">' + esc(m.fromName || '—') + '</div>';
                 mhtml += '<div class="msg-col-to">' + esc(m.toName || '—') + '</div>';
                 mhtml += '<div class="msg-col-text">' + esc(m.text || '') + '</div>';
@@ -251,7 +251,7 @@ function loadAll() {
             convArr.forEach(function(e) {
                 var key = e[0], c = e[1];
                 var names = Object.values(c.users).filter(Boolean);
-                var time = c.lastTime ? new Date(c.lastTime).toLocaleString('ar') : '';
+                var time = c.lastTime ? new Date(c.lastTime).toLocaleString('ar', {hour:'2-digit', minute:'2-digit', hour12:true, day:'numeric', month:'numeric'}) : '';
                 chtml += '<div class="card"><div class="conv-item" onclick="openConv(\'' + key + '\')">';
                 chtml += '<div><div class="conv-names">' + esc(names.join(' ↔ ')) + '</div>';
                 chtml += '<div class="conv-preview">' + esc(c.lastText || '') + '</div>';
@@ -285,7 +285,7 @@ function openConv(key) {
         html += '<div class="msg ' + (isFirst ? 'msg-right' : 'msg-left') + '">';
         html += '<div class="msg-sender">' + esc(m.fromName || '—') + '</div>';
         html += '<div>' + esc(m.text || '') + '</div>';
-        html += '<div class="msg-time">' + (m.t ? new Date(m.t).toLocaleTimeString('ar') : '') + '</div></div>';
+        html += '<div class="msg-time">' + (m.t ? new Date(m.t).toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit', hour12:true}) : '') + '</div></div>';
     });
     html += '</div></div>';
     document.getElementById('p-chat').innerHTML = html;
