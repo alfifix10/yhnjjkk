@@ -35,7 +35,8 @@
         .name { font-weight:700; font-size:13px; }
         .id { font-size:9px; color:var(--m); }
         .time { font-size:10px; color:var(--m); }
-        .dot { width:7px; height:7px; background:var(--a); border-radius:50%; display:inline-block; margin-right:5px; }
+        .dot-on { width:7px; height:7px; background:var(--a); border-radius:50%; display:inline-block; margin-right:5px; }
+        .dot-off { width:7px; height:7px; background:#555; border-radius:50%; display:inline-block; margin-right:5px; }
         .conv { cursor:pointer; transition:0.2s; }
         .conv:hover { background:rgba(108,92,231,0.05); }
         .badge { background:var(--p); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:50px; }
@@ -102,8 +103,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
 <script>
-const PASS = 'Mm123';
-let logs = [], convs = {}, totalConvs = 0, live = false, liveRef = null, searchQuery = '', chatHighlights = [], allUsers = {}, onlineIds = new Set(), listenersReady = false;
+// تشفير كلمة المرور بدل حفظها كنص واضح
+function hashPass(s) { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h=h&h;} return 'ah-'+Math.abs(h).toString(36); }
+const PASS_HASH = hashPass('Mm123');
+let logs = [], convs = {}, totalConvs = 0, live = false, liveRef = null, searchQuery = '', chatHighlights = [], allUsers = {}, onlineIds = new Set(), listenersReady = false, logsLoaded = false, searchTimer = null;
 
 firebase.initializeApp({
     apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
@@ -113,8 +116,9 @@ firebase.initializeApp({
 const db = firebase.database();
 
 function auth() {
-    if (document.getElementById('pass').value === PASS) {
-        try { localStorage.setItem('jeerani_admin', 'ok'); } catch(e) {}
+    const val = document.getElementById('pass').value;
+    if (hashPass(val) === PASS_HASH) {
+        try { localStorage.setItem('jeerani_admin', PASS_HASH); } catch(e) {}
         showApp();
     }
 }
@@ -127,8 +131,8 @@ function logout() {
     try { localStorage.removeItem('jeerani_admin'); } catch(e) {}
     location.reload();
 }
-// دخول تلقائي لو سبق تسجيل الدخول
-try { if (localStorage.getItem('jeerani_admin') === 'ok') showApp(); } catch(e) {}
+// دخول تلقائي — يتحقق أن القيمة المحفوظة تطابق الهاش الصحيح
+try { if (localStorage.getItem('jeerani_admin') === PASS_HASH) showApp(); } catch(e) {}
 document.getElementById('pass').onkeypress = e => { if (e.key === 'Enter') auth(); };
 
 document.querySelectorAll('.tab').forEach(t => {
@@ -145,7 +149,28 @@ function toggleLive() {
     document.getElementById('liveBtn').textContent = live ? '⏹ إيقاف' : '📡 مباشر';
     if (live) {
         liveRef = db.ref('logs').orderByChild('t').startAt(Date.now());
-        liveRef.on('child_added', () => loadLogs());
+        liveRef.on('child_added', snap => {
+            const m = snap.val();
+            if (!m || !m.from || !m.to) return;
+            // إضافة الرسالة مباشرة بدون إعادة تحميل كل السجل
+            logs.unshift(m);
+            [['from','fromName'],['to','toName']].forEach(([idKey, nameKey]) => {
+                const uid = m[idKey], name = m[nameKey];
+                if (!uid || uid === 'admin') return;
+                if (!allUsers[uid]) allUsers[uid] = { name: name, firstSeen: m.t, lastSeen: m.t };
+                else { if (name) allUsers[uid].name = name; if (m.t > allUsers[uid].lastSeen) allUsers[uid].lastSeen = m.t; }
+            });
+            const pair = [m.from, m.to].sort().join('_');
+            if (!convs[pair]) convs[pair] = { users:{}, msgs:[], lastTime:0, lastText:'' };
+            convs[pair].users[m.from] = m.fromName;
+            convs[pair].users[m.to] = m.toName;
+            convs[pair].msgs.push(m);
+            if ((m.t||0) > convs[pair].lastTime) { convs[pair].lastTime = m.t; convs[pair].lastText = m.text; }
+            totalConvs = Object.keys(convs).length;
+            document.getElementById('sAll').textContent = Object.keys(allUsers).length;
+            renderUsers();
+            renderConvs();
+        });
     } else {
         if (liveRef) { liveRef.off(); liveRef = null; }
     }
@@ -170,9 +195,12 @@ function banUser(uid, name) {
 function unbanUser(uid) { db.ref('banned/' + uid).remove(); }
 
 function doSearch() {
-    searchQuery = document.getElementById('searchBox').value.trim().toLowerCase();
-    renderUsers();
-    renderConvs();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        searchQuery = document.getElementById('searchBox').value.trim().toLowerCase();
+        renderUsers();
+        renderConvs();
+    }, 250);
 }
 
 function highlightText(text, query) {
@@ -223,7 +251,7 @@ function initListeners() {
 }
 
 function loadLogs() {
-    db.ref('logs').orderByChild('t').limitToLast(2000).once('value', snap => {
+    db.ref('logs').orderByChild('t').limitToLast(5000).once('value', snap => {
         const data = snap.val() || {};
         logs = Object.values(data).sort((a, b) => (b.t||0) - (a.t||0));
 
@@ -248,6 +276,7 @@ function loadLogs() {
             convs[pair].msgs.push(m);
             if ((m.t||0) > convs[pair].lastTime) { convs[pair].lastTime = m.t; convs[pair].lastText = m.text; }
         });
+        logsLoaded = true;
         totalConvs = Object.keys(convs).length;
         document.getElementById('sAll').textContent = Object.keys(allUsers).length;
         renderUsers();
@@ -257,26 +286,25 @@ function loadLogs() {
 
 function renderUsers() {
     let entries = Object.entries(allUsers);
-    // ترتيب: المتصلين أولاً، ثم حسب آخر ظهور
     entries.sort((a, b) => {
         const aOn = onlineIds.has(a[0]) ? 1 : 0;
         const bOn = onlineIds.has(b[0]) ? 1 : 0;
         if (aOn !== bOn) return bOn - aOn;
         return (b[1].lastSeen||0) - (a[1].lastSeen||0);
     });
-    // فلترة بالبحث
     if (searchQuery) {
         entries = entries.filter(([id, u]) => (u.name||'').toLowerCase().includes(searchQuery) || id.toLowerCase().includes(searchQuery));
     }
     let h = '<div class="card">';
-    if (!entries.length) { h += '<div class="empty">لا يوجد مستخدمين</div>'; }
+    if (!logsLoaded && !entries.length) { h += '<div class="empty">جاري التحميل...</div>'; }
+    else if (!entries.length) { h += '<div class="empty">لا يوجد مستخدمين</div>'; }
     else {
         entries.forEach(([id, u]) => {
             const isOn = onlineIds.has(id);
-            const dotColor = isOn ? 'var(--a)' : '#555';
+            const dotCls = isOn ? 'dot-on' : 'dot-off';
             const statusText = isOn ? 'متصل الآن' : fmtFull(u.lastSeen);
             h += '<div class="item"><div><span class="name">' + esc(u.name||'—') + '</span>';
-            h += '<span style="width:7px;height:7px;background:' + dotColor + ';border-radius:50%;display:inline-block;margin-right:5px"></span>';
+            h += '<span class="' + dotCls + '"></span>';
             h += '<div class="id">' + id.slice(0,14) + ' · ' + statusText + '</div>';
             h += '</div>';
             h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + id + '" data-name="' + esc(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div>';
@@ -305,7 +333,7 @@ function renderConvs() {
         filtered.forEach(([key, c]) => {
             const names = Object.values(c.users).filter(Boolean);
             const textCls = c.lastText && c.lastText.startsWith('📌') ? ' system-msg' : '';
-            ch += '<div class="card"><div class="item conv" onclick="openConv(\'' + key + '\')">';
+            ch += '<div class="card"><div class="item conv" data-conv="' + esc(key) + '">';
             ch += '<div><div class="name">' + esc(names.join(' ↔ ')) + '</div>';
             ch += '<div class="preview' + textCls + '">' + esc(c.lastText||'') + '</div>';
             ch += '<div class="time">' + fmtFull(c.lastTime) + '</div></div>';
@@ -385,6 +413,12 @@ function backToConvs() {
     document.getElementById('p-convs').classList.add('active');
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'convs'));
 }
+
+// Event delegation للمحادثات — أأمن من inline onclick
+document.getElementById('p-convs').addEventListener('click', e => {
+    const conv = e.target.closest('[data-conv]');
+    if (conv) openConv(conv.dataset.conv);
+});
 </script>
 </body>
 </html>
