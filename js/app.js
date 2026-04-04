@@ -1231,3 +1231,4 @@ function initPushNotifications() {
             });
         }).catch(function() {});
 }
+// Jeerani v4.0 - Final Review
