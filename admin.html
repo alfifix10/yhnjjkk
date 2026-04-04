@@ -74,7 +74,7 @@
     <div class="top">
         <div class="top-title">Jeerani Admin</div>
         <div style="display:flex;gap:6px">
-            <button class="btn" onclick="load()">🔄</button>
+            <button class="btn" onclick="loadLogs()">🔄</button>
             <button class="btn" id="liveBtn" onclick="toggleLive()">📡 مباشر</button>
             <button class="btn" style="color:var(--r)" onclick="logout()">خروج</button>
         </div>
@@ -103,7 +103,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
 <script>
 const PASS = 'Mm123';
-let logs = [], convs = {}, live = false, liveRef = null, searchQuery = '', chatHighlights = [], allUsers = {}, onlineIds = new Set();
+let logs = [], convs = {}, totalConvs = 0, live = false, liveRef = null, searchQuery = '', chatHighlights = [], allUsers = {}, onlineIds = new Set(), listenersReady = false;
 
 firebase.initializeApp({
     apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
@@ -121,7 +121,7 @@ function auth() {
 function showApp() {
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    load();
+    initListeners();
 }
 function logout() {
     try { localStorage.removeItem('jeerani_admin'); } catch(e) {}
@@ -145,9 +145,9 @@ function toggleLive() {
     document.getElementById('liveBtn').textContent = live ? '⏹ إيقاف' : '📡 مباشر';
     if (live) {
         liveRef = db.ref('logs').orderByChild('t').startAt(Date.now());
-        liveRef.on('child_added', () => load());
+        liveRef.on('child_added', () => loadLogs());
     } else {
-        if (liveRef) liveRef.off();
+        if (liveRef) { liveRef.off(); liveRef = null; }
     }
 }
 
@@ -166,9 +166,8 @@ function banUser(uid, name) {
     db.ref('online/' + uid).remove();
     db.ref('msgs/' + uid).push({ from:'admin', name:'🚫', text:'🚫 تم حظرك من قبل الإدارة', t:firebase.database.ServerValue.TIMESTAMP, system:true });
     db.ref('banned/' + uid).set({ name:name, t:firebase.database.ServerValue.TIMESTAMP });
-    load();
 }
-function unbanUser(uid) { db.ref('banned/' + uid).remove(); load(); }
+function unbanUser(uid) { db.ref('banned/' + uid).remove(); }
 
 function doSearch() {
     searchQuery = document.getElementById('searchBox').value.trim().toLowerCase();
@@ -183,12 +182,15 @@ function highlightText(text, query) {
     return escaped.replace(regex, '<span class="highlight">$1</span>');
 }
 
-function load() {
-    // المتصلين (لتحديد من أونلاين + أسماءهم)
+// تشغيل listeners مرة واحدة فقط
+function initListeners() {
+    if (listenersReady) return;
+    listenersReady = true;
+
+    // المتصلين — realtime
     db.ref('online').on('value', snap => {
         const data = snap.val() || {};
         onlineIds = new Set(Object.keys(data));
-        // إضافة المتصلين لقائمة المستخدمين
         Object.entries(data).forEach(([id, u]) => {
             if (!allUsers[id]) allUsers[id] = { name: u.name, firstSeen: u.t, lastSeen: u.t };
             else { allUsers[id].name = u.name; allUsers[id].lastSeen = u.t; }
@@ -198,7 +200,7 @@ function load() {
         renderUsers();
     });
 
-    // المحظورين
+    // المحظورين — realtime
     db.ref('banned').on('value', snap => {
         const data = snap.val() || {};
         const list = Object.entries(data);
@@ -216,7 +218,11 @@ function load() {
         document.getElementById('p-banned').innerHTML = h;
     });
 
-    // المحادثات — واستخراج المستخدمين من السجل
+    // تحميل السجل
+    loadLogs();
+}
+
+function loadLogs() {
     db.ref('logs').orderByChild('t').limitToLast(2000).once('value', snap => {
         const data = snap.val() || {};
         logs = Object.values(data).sort((a, b) => (b.t||0) - (a.t||0));
@@ -224,7 +230,6 @@ function load() {
         convs = {};
         logs.forEach(m => {
             if (!m.from || !m.to) return;
-            // استخراج المستخدمين من الرسائل
             [['from','fromName'],['to','toName']].forEach(([idKey, nameKey]) => {
                 const uid = m[idKey], name = m[nameKey];
                 if (!uid || uid === 'admin') return;
@@ -243,6 +248,7 @@ function load() {
             convs[pair].msgs.push(m);
             if ((m.t||0) > convs[pair].lastTime) { convs[pair].lastTime = m.t; convs[pair].lastText = m.text; }
         });
+        totalConvs = Object.keys(convs).length;
         document.getElementById('sAll').textContent = Object.keys(allUsers).length;
         renderUsers();
         renderConvs();
@@ -291,7 +297,7 @@ function renderConvs() {
             return hasName || hasText;
         });
     }
-    document.getElementById('sCo').textContent = filtered.length;
+    document.getElementById('sCo').textContent = totalConvs;
 
     let ch = '';
     if (!filtered.length) { ch = '<div class="card"><div class="empty">' + (searchQuery ? 'لا توجد نتائج لـ "' + esc(searchQuery) + '"' : 'لا توجد محادثات') + '</div></div>'; }
