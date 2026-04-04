@@ -76,7 +76,7 @@
         <div class="top-title">Jeerani Admin</div>
         <div style="display:flex;gap:6px">
             <button class="btn" onclick="loadLogs()">🔄</button>
-            <button class="btn" id="liveBtn" onclick="toggleLive()">📡 مباشر</button>
+            <button class="btn" id="liveBtn" onclick="toggleLive()">📡</button>
             <button class="btn" style="color:var(--a)" onclick="sendAnnouncement()">📢</button>
             <button class="btn" style="color:var(--r)" onclick="logout()">خروج</button>
         </div>
@@ -165,7 +165,7 @@ document.querySelectorAll('.tab').forEach(t => {
 
 function toggleLive() {
     live = !live;
-    document.getElementById('liveBtn').textContent = live ? '⏹ إيقاف' : '📡 مباشر';
+    document.getElementById('liveBtn').textContent = live ? '⏹' : '📡';
     if (live) {
         liveRef = db.ref('logs').orderByChild('t').startAt(Date.now());
         liveRef.on('child_added', snap => {
