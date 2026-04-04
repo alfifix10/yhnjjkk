@@ -106,7 +106,7 @@
 // تشفير كلمة المرور بدل حفظها كنص واضح
 function hashPass(s) { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h=h&h;} return 'ah-'+Math.abs(h).toString(36); }
 const PASS_HASH = hashPass('Mm123');
-let logs = [], convs = {}, totalConvs = 0, live = false, liveRef = null, searchQuery = '', chatHighlights = [], onlineIds = new Set(), listenersReady = false, logsLoaded = false, searchTimer = null;
+let logs = [], convs = {}, totalConvs = 0, live = false, liveRef = null, searchQuery = '', chatHighlights = [], onlineIds = new Set(), bannedIds = new Set(), listenersReady = false, logsLoaded = false, searchTimer = null;
 
 // تحميل المستخدمين المحفوظين من localStorage
 let allUsers = {};
@@ -267,6 +267,7 @@ function initListeners() {
     // المحظورين — realtime (إخفاء مدخلات البصمة — تظهر فقط المدخلات بالـ ID الكامل)
     db.ref('banned').on('value', snap => {
         const data = snap.val() || {};
+        bannedIds = new Set(Object.keys(data));
         const list = Object.entries(data).filter(([uid, u]) => !u.linkedTo).sort((a, b) => (b[1].t||0) - (a[1].t||0));
         document.getElementById('sBn').textContent = list.length;
         let h = '<div class="card">';
@@ -280,6 +281,7 @@ function initListeners() {
         }
         h += '</div>';
         document.getElementById('p-banned').innerHTML = h;
+        renderUsers();
     });
 
     // تحميل السجل
@@ -328,7 +330,7 @@ function loadLogs() {
 }
 
 function renderUsers() {
-    let entries = Object.entries(allUsers);
+    let entries = Object.entries(allUsers).filter(([id]) => !bannedIds.has(id));
     entries.sort((a, b) => {
         const aOn = onlineIds.has(a[0]) ? 1 : 0;
         const bOn = onlineIds.has(b[0]) ? 1 : 0;
