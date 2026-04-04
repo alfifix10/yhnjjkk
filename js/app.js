@@ -519,25 +519,17 @@ function enterPeopleScreen() {
         db.ref('online/' + oldId).remove();
     });
 
-    // مراقبة اتصال Firebase — يظهر البانر فقط لو انقطع بعد ما كان متصل
+    // مراقبة اتصال Firebase — إعادة تسجيل الحضور عند العودة
     let wasConnected = false;
-    let offlineTimer = null;
     db.ref('.info/connected').on('value', function(snap) {
-        let banner = document.getElementById('offlineBanner');
         if (snap.val() === true) {
-            if (offlineTimer) { clearTimeout(offlineTimer); offlineTimer = null; }
             if (wasConnected && myPresenceRef) {
                 let presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
                 if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
                 myPresenceRef.set(presenceData);
             }
             wasConnected = true;
-            if (banner) banner.style.display = 'none';
             if (myPresenceRef) myPresenceRef.onDisconnect().remove();
-        } else if (wasConnected && banner) {
-            offlineTimer = setTimeout(function() {
-                banner.style.display = 'flex';
-            }, 3000);
         }
     });
 
