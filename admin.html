@@ -4,302 +4,330 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jeerani — لوحة التحكم</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #6c5ce7;
-            --accent: #00cec9;
-            --dark: #0a0a0f;
-            --dark-2: #12121a;
-            --dark-3: #1a1a2e;
-            --dark-4: #252540;
-            --text: #e8e8f0;
-            --muted: #7f7f9a;
-            --glass-border: rgba(255,255,255,0.07);
-            --danger: #e17055;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Cairo', sans-serif; background: var(--dark); color: var(--text); min-height: 100vh; }
-
-        /* Login */
-        .login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 16px; padding: 20px; }
-        .login-logo { font-family: 'Poppins', sans-serif; font-size: 32px; font-weight: 800; color: #fff; letter-spacing: 2px; }
-        .login-sub { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
-        .login-input { padding: 14px 20px; border-radius: 14px; border: 2px solid var(--glass-border); background: var(--dark-2); color: var(--text); font-family: 'Cairo'; font-size: 16px; width: 280px; text-align: center; outline: none; }
-        .login-input:focus { border-color: var(--primary); }
-        .login-btn { padding: 12px 40px; border-radius: 14px; border: none; background: var(--primary); color: white; font-family: 'Cairo'; font-size: 16px; font-weight: 700; cursor: pointer; }
-        .login-error { color: var(--danger); font-size: 13px; display: none; }
-
-        /* Layout */
-        .app { display: none; }
-        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--dark-2); border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; z-index: 10; }
-        .topbar-title { font-family: 'Poppins'; font-weight: 800; font-size: 18px; letter-spacing: 1px; }
-        .topbar-actions { display: flex; gap: 8px; }
-        .btn { padding: 7px 16px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--dark-3); color: var(--text); font-family: 'Cairo'; cursor: pointer; font-size: 12px; transition: 0.2s; }
-        .btn:hover { background: var(--dark-4); }
-        .btn-primary { background: var(--primary); border-color: var(--primary); color: white; }
-
-        .content { max-width: 700px; margin: 0 auto; padding: 16px; }
-
-        /* Stats */
-        .stats { display: flex; gap: 10px; margin-bottom: 16px; }
-        .stat { flex: 1; background: var(--dark-2); border: 1px solid var(--glass-border); border-radius: 16px; padding: 14px; text-align: center; }
-        .stat-num { font-size: 28px; font-weight: 900; color: var(--primary); }
-        .stat-label { font-size: 11px; color: var(--muted); }
-
-        /* Tabs */
-        .tabs { display: flex; gap: 6px; margin-bottom: 14px; background: var(--dark-2); border-radius: 12px; padding: 4px; }
-        .tab { flex: 1; text-align: center; padding: 8px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: 0.2s; }
-        .tab.active { background: var(--primary); color: white; }
-
-        /* Cards */
-        .card { background: var(--dark-2); border: 1px solid var(--glass-border); border-radius: 14px; margin-bottom: 8px; overflow: hidden; }
-        .card-header { padding: 12px 16px; font-weight: 700; font-size: 14px; border-bottom: 1px solid var(--glass-border); }
-
-        /* User list */
-        .user-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .user-item:last-child { border: none; }
-        .user-name { font-weight: 700; font-size: 14px; }
-        .user-id { font-size: 10px; color: var(--muted); }
-        .user-time { font-size: 11px; color: var(--muted); }
-        .dot-online { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: inline-block; margin-left: 6px; }
-
-        /* Conversations */
-        .conv-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; }
-        .conv-item:hover { background: rgba(108,92,231,0.05); }
-        .conv-item:last-child { border: none; }
-        .conv-names { font-weight: 700; font-size: 14px; }
-        .conv-preview { font-size: 12px; color: var(--muted); margin-top: 2px; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .conv-badge { background: var(--primary); color: white; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 50px; min-width: 24px; text-align: center; }
-        .conv-time { font-size: 10px; color: var(--muted); margin-top: 4px; }
-
-        /* Chat view */
-        .chat-topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--dark-2); border-bottom: 1px solid var(--glass-border); }
-        .chat-area { padding: 16px; max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-        .msg { max-width: 80%; padding: 8px 12px 4px; border-radius: 14px; font-size: 13px; line-height: 1.5; }
-        .msg-right { align-self: flex-start; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
-        .msg-left { align-self: flex-end; background: var(--dark-4); border-bottom-left-radius: 4px; }
-        .msg-sender { font-size: 10px; font-weight: 700; opacity: 0.6; margin-bottom: 2px; }
-        .msg-time { font-size: 9px; opacity: 0.4; margin-top: 2px; display: flex; justify-content: flex-end; }
-
-        /* All messages table */
-        .msg-row { display: flex; gap: 12px; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 12px; align-items: center; }
-        .msg-row:last-child { border: none; }
-        .msg-col-from { width: 80px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
-        .msg-col-to { width: 80px; font-weight: 700; color: var(--primary); flex-shrink: 0; }
-        .msg-col-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .msg-col-time { width: 70px; color: var(--muted); font-size: 10px; text-align: left; flex-shrink: 0; }
-
-        .empty { text-align: center; color: var(--muted); padding: 40px 16px; font-size: 14px; }
-        .panel { display: none; }
-        .panel.active { display: block; }
-
-        @media (max-width: 768px) {
-            .stat-num { font-size: 22px; }
-            .stats { gap: 6px; }
-            .stat { padding: 10px 8px; }
-        }
+        :root { --p:#6c5ce7; --a:#00cec9; --d:#0a0a0f; --d2:#12121a; --d3:#1a1a2e; --d4:#252540; --t:#e8e8f0; --m:#7f7f9a; --b:rgba(255,255,255,0.07); --r:#e17055; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Cairo',sans-serif; background:var(--d); color:var(--t); min-height:100vh; }
+        .login { display:flex; align-items:center; justify-content:center; height:100vh; padding:16px; }
+        .login-frame { background:var(--d2); border:1px solid var(--b); border-radius:24px; padding:40px 36px 32px; display:flex; flex-direction:column; align-items:center; gap:14px; box-shadow:0 16px 60px rgba(0,0,0,0.5); width:min(90vw, 380px); }
+        .login input { padding:14px 20px; border-radius:14px; border:2px solid var(--b); background:var(--d3); color:var(--t); font-family:'Cairo'; font-size:16px; width:100%; text-align:center; outline:none; }
+        .login input:focus { border-color:var(--p); }
+        .login button { padding:12px 36px; border-radius:14px; border:none; background:var(--p); color:#fff; font-family:'Cairo'; font-size:15px; font-weight:700; cursor:pointer; width:100%; }
+        .app { display:none; }
+        .top { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--d2); border-bottom:1px solid var(--b); position:sticky; top:0; z-index:10; }
+        .top-title { font-family:'Poppins'; font-weight:800; font-size:16px; }
+        .btn { padding:6px 14px; border-radius:8px; border:1px solid var(--b); background:var(--d3); color:var(--t); font-family:'Cairo'; cursor:pointer; font-size:11px; }
+        .btn:hover { background:var(--d4); }
+        .content { max-width:700px; margin:0 auto; padding:12px; }
+        .stats { display:flex; gap:8px; margin-bottom:12px; }
+        .stat { flex:1; background:var(--d2); border:1px solid var(--b); border-radius:14px; padding:12px; text-align:center; }
+        .stat b { font-size:24px; color:var(--p); display:block; }
+        .stat span { font-size:10px; color:var(--m); }
+        .search { width:100%; padding:10px 16px; border-radius:10px; border:1px solid var(--b); background:var(--d2); color:var(--t); font-family:'Cairo'; font-size:14px; outline:none; margin-bottom:12px; }
+        .search:focus { border-color:var(--p); }
+        .tabs { display:flex; gap:4px; margin-bottom:12px; background:var(--d2); border-radius:10px; padding:3px; }
+        .tab { flex:1; text-align:center; padding:7px; border-radius:8px; font-size:12px; font-weight:600; color:var(--m); cursor:pointer; }
+        .tab.active { background:var(--p); color:#fff; }
+        .card { background:var(--d2); border:1px solid var(--b); border-radius:12px; margin-bottom:6px; overflow:hidden; }
+        .item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.03); }
+        .item:last-child { border:none; }
+        .name { font-weight:700; font-size:13px; }
+        .id { font-size:9px; color:var(--m); }
+        .time { font-size:10px; color:var(--m); }
+        .dot { width:7px; height:7px; background:var(--a); border-radius:50%; display:inline-block; margin-right:5px; }
+        .conv { cursor:pointer; transition:0.2s; }
+        .conv:hover { background:rgba(108,92,231,0.05); }
+        .badge { background:var(--p); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:50px; }
+        .preview { font-size:11px; color:var(--m); margin-top:2px; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .system-msg { color:var(--a); font-style:italic; }
+        .chat-top { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--d2); border-bottom:1px solid var(--b); }
+        .chat-area { padding:12px; max-height:70vh; overflow-y:auto; display:flex; flex-direction:column; gap:5px; }
+        .msg { max-width:80%; padding:7px 11px 3px; border-radius:12px; font-size:12px; line-height:1.5; }
+        .msg-r { align-self:flex-start; background:var(--p); color:#fff; border-bottom-right-radius:3px; }
+        .msg-l { align-self:flex-end; background:var(--d4); border-bottom-left-radius:3px; }
+        .msg-s { align-self:center; color:var(--a); font-size:11px; font-style:italic; }
+        .msg small { font-size:9px; opacity:0.5; display:block; text-align:left; }
+        .msg .sender { font-size:9px; font-weight:700; opacity:0.6; margin-bottom:1px; }
+        .highlight { background:rgba(108,92,231,0.3); border-radius:3px; padding:0 2px; }
+        .nav-arrows { display:flex; gap:6px; align-items:center; }
+        .nav-arrows button { background:var(--d3); border:1px solid var(--b); color:var(--t); border-radius:6px; padding:2px 8px; cursor:pointer; font-size:12px; }
+        .nav-arrows span { font-size:10px; color:var(--m); }
+        .empty { text-align:center; color:var(--m); padding:30px 14px; font-size:13px; }
+        .panel { display:none; }
+        .panel.active { display:block; }
+        @media(max-width:768px) { .stat b { font-size:20px; } .stats { gap:4px; } }
     </style>
 </head>
 <body>
 
-<div class="login-screen" id="loginScreen">
-    <div class="login-logo">Jeerani</div>
-    <div class="login-sub">لوحة التحكم</div>
-    <input type="password" class="login-input" id="adminPass" placeholder="كلمة المرور">
-    <button class="login-btn" onclick="checkPass()">دخول</button>
-    <div class="login-error" id="loginError">كلمة المرور غير صحيحة</div>
+<div class="login" id="login">
+    <div class="login-frame">
+        <img src="assets/logo.png" alt="Jeerani" style="width:200px;height:auto">
+        <div style="color:var(--m);font-size:13px">لوحة التحكم</div>
+        <input type="password" id="pass" placeholder="كلمة المرور">
+        <button onclick="auth()">دخول</button>
+    </div>
 </div>
 
 <div class="app" id="app">
-    <div class="topbar">
-        <div class="topbar-title">Jeerani</div>
-        <div class="topbar-actions">
-            <button class="btn" onclick="loadAll()">🔄 تحديث</button>
-            <button class="btn" onclick="toggleLive()">📡 <span id="liveLabel">مباشر</span></button>
+    <div class="top">
+        <div class="top-title">Jeerani Admin</div>
+        <div style="display:flex;gap:6px">
+            <button class="btn" onclick="load()">🔄</button>
+            <button class="btn" id="liveBtn" onclick="toggleLive()">📡 مباشر</button>
         </div>
     </div>
     <div class="content">
         <div class="stats">
-            <div class="stat"><div class="stat-num" id="sOnline">0</div><div class="stat-label">متصل</div></div>
-            <div class="stat"><div class="stat-num" id="sConvs">0</div><div class="stat-label">محادثة</div></div>
-            <div class="stat"><div class="stat-num" id="sMsgs">0</div><div class="stat-label">رسالة</div></div>
+            <div class="stat"><b id="sOn">0</b><span>متصل</span></div>
+            <div class="stat"><b id="sCo">0</b><span>محادثة</span></div>
+            <div class="stat"><b id="sBn">0</b><span>محظور</span></div>
         </div>
+        <input class="search" id="searchBox" placeholder="🔍 بحث في المحادثات..." oninput="searchConvs()">
         <div class="tabs">
             <div class="tab active" data-tab="online">👥 المتصلين</div>
             <div class="tab" data-tab="convs">💬 المحادثات</div>
-            <div class="tab" data-tab="allmsgs">📝 السجل</div>
+            <div class="tab" data-tab="banned">🚫 المحظورين</div>
         </div>
         <div id="p-online" class="panel active"></div>
         <div id="p-convs" class="panel"></div>
         <div id="p-chat" class="panel"></div>
-        <div id="p-allmsgs" class="panel"></div>
+        <div id="p-banned" class="panel"></div>
     </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
 <script>
-var ADMIN_PASS = '120';
-var allLogs = [], conversations = {}, liveMode = false, liveRef = null;
+const PASS = 'Mm123';
+let logs = [], convs = {}, live = false, liveRef = null, searchQuery = '', chatHighlights = [];
 
 firebase.initializeApp({
     apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
     databaseURL: "https://jiranak-e9ee2-default-rtdb.firebaseio.com",
     projectId: "jiranak-e9ee2"
 });
-var db = firebase.database();
+const db = firebase.database();
 
-function checkPass() {
-    if (document.getElementById('adminPass').value === ADMIN_PASS) {
-        document.getElementById('loginScreen').style.display = 'none';
+function auth() {
+    if (document.getElementById('pass').value === PASS) {
+        document.getElementById('login').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        loadAll();
-    } else {
-        document.getElementById('loginError').style.display = 'block';
+        load();
     }
 }
-document.getElementById('adminPass').onkeypress = function(e) { if (e.key === 'Enter') checkPass(); };
+document.getElementById('pass').onkeypress = e => { if (e.key === 'Enter') auth(); };
 
-// Tabs
-document.querySelectorAll('.tab').forEach(function(t) {
-    t.onclick = function() {
-        document.querySelectorAll('.tab').forEach(function(x) { x.classList.remove('active'); });
+document.querySelectorAll('.tab').forEach(t => {
+    t.onclick = () => {
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
         t.classList.add('active');
-        document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
         document.getElementById('p-' + t.dataset.tab).classList.add('active');
     };
 });
 
 function toggleLive() {
-    liveMode = !liveMode;
-    document.getElementById('liveLabel').textContent = liveMode ? 'إيقاف' : 'مباشر';
-    if (liveMode) {
+    live = !live;
+    document.getElementById('liveBtn').textContent = live ? '⏹ إيقاف' : '📡 مباشر';
+    if (live) {
         liveRef = db.ref('logs').orderByChild('t').startAt(Date.now());
-        liveRef.on('child_added', function() { loadAll(); });
-        db.ref('online').on('value', function() { loadAll(); });
+        liveRef.on('child_added', () => load());
     } else {
         if (liveRef) liveRef.off();
-        db.ref('online').off();
     }
 }
 
-function loadAll() {
-    db.ref('online').once('value', function(snap) {
-        var data = snap.val() || {};
-        var users = Object.entries(data);
-        document.getElementById('sOnline').textContent = users.length;
-        var html = '<div class="card">';
-        if (users.length === 0) {
-            html += '<div class="empty">لا يوجد أحد متصل</div>';
-        } else {
-            users.forEach(function(e) {
-                var u = e[1], time = u.t ? new Date(u.t).toLocaleTimeString('ar') : '';
-                html += '<div class="user-item"><div><span class="user-name">' + esc(u.name || '—') + '</span><span class="dot-online"></span>';
-                html += '<div class="user-id">' + e[0].slice(0, 16) + '</div></div>';
-                html += '<div class="user-time">' + time + '</div></div>';
+function fmt(t) {
+    if (!t) return '';
+    return new Date(t).toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit', hour12:true});
+}
+function fmtFull(t) {
+    if (!t) return '';
+    return new Date(t).toLocaleDateString('ar', {day:'numeric', month:'short'}) + ' ' + fmt(t);
+}
+function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+function banUser(uid, name) {
+    if (!confirm('حظر ' + name + '؟')) return;
+    db.ref('online/' + uid).remove();
+    db.ref('msgs/' + uid).push({ from:'admin', name:'🚫', text:'🚫 تم حظرك من قبل الإدارة', t:firebase.database.ServerValue.TIMESTAMP, system:true });
+    db.ref('banned/' + uid).set({ name:name, t:firebase.database.ServerValue.TIMESTAMP });
+    load();
+}
+function unbanUser(uid) { db.ref('banned/' + uid).remove(); load(); }
+
+function searchConvs() {
+    searchQuery = document.getElementById('searchBox').value.trim().toLowerCase();
+    renderConvs();
+}
+
+function highlightText(text, query) {
+    if (!query) return esc(text);
+    const escaped = esc(text);
+    const regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return escaped.replace(regex, '<span class="highlight">$1</span>');
+}
+
+function load() {
+    // المتصلين
+    db.ref('online').on('value', snap => {
+        const data = snap.val() || {};
+        const users = Object.entries(data);
+        document.getElementById('sOn').textContent = users.length;
+        let h = '<div class="card">';
+        if (!users.length) { h += '<div class="empty">لا يوجد أحد</div>'; }
+        else {
+            users.forEach(([id, u]) => {
+                h += '<div class="item"><div><span class="name">' + esc(u.name||'—') + '</span><span class="dot"></span>';
+                if (u.acc) h += '<span style="font-size:9px;color:var(--m);margin-right:6px">' + Math.round(u.acc) + 'm</span>';
+                h += '<div class="id">' + id.slice(0,14) + '</div></div>';
+                h += '<div style="display:flex;gap:6px;align-items:center"><span class="time">' + fmt(u.t) + '</span>';
+                h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + id + '" data-name="' + esc(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div></div>';
             });
         }
-        html += '</div>';
-        document.getElementById('p-online').innerHTML = html;
+        h += '</div>';
+        document.getElementById('p-online').innerHTML = h;
     });
 
-    db.ref('logs').orderByChild('t').limitToLast(500).once('value', function(snap) {
-        var data = snap.val() || {};
-        allLogs = Object.values(data).sort(function(a, b) { return (b.t || 0) - (a.t || 0); });
-        document.getElementById('sMsgs').textContent = allLogs.length;
-
-        // All messages
-        var mhtml = '<div class="card">';
-        if (allLogs.length === 0) {
-            mhtml += '<div class="empty">لا توجد رسائل</div>';
-        } else {
-            allLogs.slice(0, 200).forEach(function(m) {
-                var time = m.t ? new Date(m.t).toLocaleTimeString('ar') : '';
-                mhtml += '<div class="msg-row"><div class="msg-col-from">' + esc(m.fromName || '—') + '</div>';
-                mhtml += '<div class="msg-col-to">' + esc(m.toName || '—') + '</div>';
-                mhtml += '<div class="msg-col-text">' + esc(m.text || '') + '</div>';
-                mhtml += '<div class="msg-col-time">' + time + '</div></div>';
+    // المحظورين
+    db.ref('banned').on('value', snap => {
+        const data = snap.val() || {};
+        const list = Object.entries(data);
+        document.getElementById('sBn').textContent = list.length;
+        let h = '<div class="card">';
+        if (!list.length) { h += '<div class="empty">لا يوجد محظورين</div>'; }
+        else {
+            list.forEach(([uid, u]) => {
+                h += '<div class="item"><div><span class="name">' + esc(u.name||uid.slice(0,14)) + '</span>';
+                h += '<div class="id">' + uid.slice(0,14) + '</div></div>';
+                h += '<button class="btn" style="font-size:10px;padding:3px 10px;color:var(--a);border-color:var(--a)" data-uid="' + uid + '" onclick="unbanUser(this.dataset.uid)">إلغاء ❎</button></div>';
             });
         }
-        mhtml += '</div>';
-        document.getElementById('p-allmsgs').innerHTML = mhtml;
+        h += '</div>';
+        document.getElementById('p-banned').innerHTML = h;
+    });
 
-        // Group conversations
-        conversations = {};
-        allLogs.forEach(function(m) {
+    // المحادثات
+    db.ref('logs').orderByChild('t').limitToLast(500).once('value', snap => {
+        const data = snap.val() || {};
+        logs = Object.values(data).sort((a, b) => (b.t||0) - (a.t||0));
+        document.getElementById('sCo').textContent = '...';
+
+        convs = {};
+        logs.forEach(m => {
             if (!m.from || !m.to) return;
-            var pair = [m.from, m.to].sort().join('_');
-            if (!conversations[pair]) conversations[pair] = { users: {}, msgs: [], lastTime: 0, lastText: '' };
-            conversations[pair].users[m.from] = m.fromName;
-            conversations[pair].users[m.to] = m.toName;
-            conversations[pair].msgs.push(m);
-            if ((m.t || 0) > conversations[pair].lastTime) {
-                conversations[pair].lastTime = m.t;
-                conversations[pair].lastText = m.text;
-            }
+            const pair = [m.from, m.to].sort().join('_');
+            if (!convs[pair]) convs[pair] = { users:{}, msgs:[], lastTime:0, lastText:'' };
+            convs[pair].users[m.from] = m.fromName;
+            convs[pair].users[m.to] = m.toName;
+            convs[pair].msgs.push(m);
+            if ((m.t||0) > convs[pair].lastTime) { convs[pair].lastTime = m.t; convs[pair].lastText = m.text; }
         });
-
-        var convArr = Object.entries(conversations).sort(function(a, b) { return b[1].lastTime - a[1].lastTime; });
-        document.getElementById('sConvs').textContent = convArr.length;
-
-        var chtml = '';
-        if (convArr.length === 0) {
-            chtml = '<div class="card"><div class="empty">لا توجد محادثات</div></div>';
-        } else {
-            convArr.forEach(function(e) {
-                var key = e[0], c = e[1];
-                var names = Object.values(c.users).filter(Boolean);
-                var time = c.lastTime ? new Date(c.lastTime).toLocaleString('ar') : '';
-                chtml += '<div class="card"><div class="conv-item" onclick="openConv(\'' + key + '\')">';
-                chtml += '<div><div class="conv-names">' + esc(names.join(' ↔ ')) + '</div>';
-                chtml += '<div class="conv-preview">' + esc(c.lastText || '') + '</div>';
-                chtml += '<div class="conv-time">' + time + '</div></div>';
-                chtml += '<div class="conv-badge">' + c.msgs.length + '</div>';
-                chtml += '</div></div>';
-            });
-        }
-        document.getElementById('p-convs').innerHTML = chtml;
+        renderConvs();
     });
+}
+
+function renderConvs() {
+    const arr = Object.entries(convs).sort((a, b) => b[1].lastTime - a[1].lastTime);
+    let filtered = arr;
+    if (searchQuery) {
+        filtered = arr.filter(([k, c]) => {
+            const names = Object.values(c.users).filter(Boolean).join(' ').toLowerCase();
+            const hasName = names.includes(searchQuery);
+            const hasText = c.msgs.some(m => (m.text||'').toLowerCase().includes(searchQuery));
+            return hasName || hasText;
+        });
+    }
+    document.getElementById('sCo').textContent = filtered.length;
+
+    let ch = '';
+    if (!filtered.length) { ch = '<div class="card"><div class="empty">' + (searchQuery ? 'لا توجد نتائج لـ "' + esc(searchQuery) + '"' : 'لا توجد محادثات') + '</div></div>'; }
+    else {
+        filtered.forEach(([key, c]) => {
+            const names = Object.values(c.users).filter(Boolean);
+            const textCls = c.lastText && c.lastText.startsWith('📌') ? ' system-msg' : '';
+            ch += '<div class="card"><div class="item conv" onclick="openConv(\'' + key + '\')">';
+            ch += '<div><div class="name">' + esc(names.join(' ↔ ')) + '</div>';
+            ch += '<div class="preview' + textCls + '">' + esc(c.lastText||'') + '</div>';
+            ch += '<div class="time">' + fmtFull(c.lastTime) + '</div></div>';
+            ch += '<div class="badge">' + c.msgs.length + '</div></div></div>';
+        });
+    }
+    document.getElementById('p-convs').innerHTML = ch;
 }
 
 function openConv(key) {
-    var c = conversations[key];
+    const c = convs[key];
     if (!c) return;
-    // Switch to chat panel
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('p-chat').classList.add('active');
 
-    var names = Object.values(c.users).filter(Boolean);
-    var msgs = c.msgs.sort(function(a, b) { return (a.t || 0) - (b.t || 0); });
-    var firstUser = msgs[0] ? msgs[0].from : '';
+    const names = Object.values(c.users).filter(Boolean);
+    const msgs = c.msgs.sort((a, b) => (a.t||0) - (b.t||0));
+    const first = msgs[0] ? msgs[0].from : '';
 
-    var html = '<div class="card">';
-    html += '<div class="chat-topbar"><strong>' + esc(names.join(' ↔ ')) + '</strong>';
-    html += '<button class="btn" onclick="backToConvs()">← رجوع</button></div>';
-    html += '<div class="chat-area">';
-    msgs.forEach(function(m) {
-        var isFirst = m.from === firstUser;
-        html += '<div class="msg ' + (isFirst ? 'msg-right' : 'msg-left') + '">';
-        html += '<div class="msg-sender">' + esc(m.fromName || '—') + '</div>';
-        html += '<div>' + esc(m.text || '') + '</div>';
-        html += '<div class="msg-time">' + (m.t ? new Date(m.t).toLocaleTimeString('ar') : '') + '</div></div>';
+    // حساب highlights لو فيه بحث
+    chatHighlights = [];
+    if (searchQuery) {
+        msgs.forEach((m, i) => {
+            if ((m.text||'').toLowerCase().includes(searchQuery)) chatHighlights.push(i);
+        });
+    }
+
+    let h = '<div class="card">';
+    h += '<div class="chat-top"><div><strong>' + esc(names.join(' ↔ ')) + '</strong> <span style="font-size:11px;color:var(--m)">(' + msgs.length + ')</span></div>';
+    h += '<div style="display:flex;gap:8px;align-items:center">';
+    if (chatHighlights.length > 0) {
+        h += '<div class="nav-arrows"><button onclick="navHighlight(-1)">▲</button><span id="hlCount">' + chatHighlights.length + ' نتيجة</span><button onclick="navHighlight(1)">▼</button></div>';
+    }
+    h += '<button class="btn" onclick="backToConvs()">← رجوع</button></div></div>';
+    h += '<div class="chat-area" id="chatArea">';
+
+    msgs.forEach((m, i) => {
+        const id = 'msg-' + i;
+        if (m.system || (m.text && m.text.startsWith('📌'))) {
+            h += '<div class="msg msg-s" id="' + id + '">' + highlightText(m.text||'', searchQuery) + '<small>' + fmt(m.t) + '</small></div>';
+        } else {
+            const cls = m.from === first ? 'msg-r' : 'msg-l';
+            h += '<div class="msg ' + cls + '" id="' + id + '"><div class="sender">' + esc(m.fromName||'—') + '</div>';
+            h += highlightText(m.text||'', searchQuery) + '<small>' + fmt(m.t) + '</small></div>';
+        }
     });
-    html += '</div></div>';
-    document.getElementById('p-chat').innerHTML = html;
+    h += '</div></div>';
+    document.getElementById('p-chat').innerHTML = h;
+
+    // انتقل لأول نتيجة بحث
+    if (chatHighlights.length > 0) {
+        window._hlIndex = 0;
+        setTimeout(() => navHighlight(0), 100);
+    }
+}
+
+window._hlIndex = 0;
+function navHighlight(dir) {
+    if (!chatHighlights.length) return;
+    if (dir !== 0) window._hlIndex += dir;
+    if (window._hlIndex < 0) window._hlIndex = chatHighlights.length - 1;
+    if (window._hlIndex >= chatHighlights.length) window._hlIndex = 0;
+    const msgIdx = chatHighlights[window._hlIndex];
+    const el = document.getElementById('msg-' + msgIdx);
+    if (el) {
+        el.scrollIntoView({ behavior:'smooth', block:'center' });
+        el.style.outline = '2px solid var(--a)';
+        setTimeout(() => el.style.outline = '', 2000);
+    }
+    const counter = document.getElementById('hlCount');
+    if (counter) counter.textContent = (window._hlIndex + 1) + '/' + chatHighlights.length;
 }
 
 function backToConvs() {
-    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('p-convs').classList.add('active');
-    document.querySelectorAll('.tab').forEach(function(t) {
-        t.classList.toggle('active', t.dataset.tab === 'convs');
-    });
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'convs'));
 }
-
-function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 </script>
 </body>
 </html>
