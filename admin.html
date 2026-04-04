@@ -395,7 +395,7 @@ function renderConvs() {
             ch += '<div class="preview' + textCls + '">' + esc(c.lastText||'') + '</div>';
             ch += '<div class="time">' + fmtFull(c.lastTime) + '</div></div>';
             ch += '<div style="display:flex;gap:6px;align-items:center"><span class="badge">' + c.msgs.length + '</span>';
-            ch += '<button class="btn" style="font-size:9px;padding:2px 5px;color:var(--r);border-color:var(--r)" data-delconv="' + escAttr(key) + '" onclick="event.stopPropagation();deleteConv(this.dataset.delconv)">🗑</button></div></div></div>';
+            ch += '<button class="btn" style="font-size:9px;padding:2px 5px;color:var(--r);border-color:var(--r)" data-delconv="' + escAttr(key) + '" onclick="event.stopPropagation();deleteConv(this.dataset.delconv)">✕</button></div></div></div>';
         });
     }
     document.getElementById('p-convs').innerHTML = ch;
