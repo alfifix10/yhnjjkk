@@ -1,69 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420" width="400" height="420">
   <defs>
-    <linearGradient id="bubble" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#00e5ff"/>
-      <stop offset="50%" style="stop-color:#9c27b0"/>
-      <stop offset="100%" style="stop-color:#e91e8c"/>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="45%" stop-color="#9c27b0"/>
+      <stop offset="100%" stop-color="#e91e8c"/>
     </linearGradient>
-    <linearGradient id="heart" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#00e5ff;stop-opacity:0.6"/>
-      <stop offset="100%" style="stop-color:#9c27b0;stop-opacity:0.6"/>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#9c27b0" stop-opacity="0.5"/>
     </linearGradient>
   </defs>
 
-  <!-- فقاعة الدردشة -->
-  <path d="M200 60 C280 60 340 110 340 175 C340 240 280 290 200 290 C180 290 162 286 145 280 L100 320 L115 270 C80 248 60 215 60 175 C60 110 120 60 200 60 Z"
-        fill="url(#bubble)" opacity="0.95"/>
+  <!-- فقاعة الدردشة الرئيسية -->
+  <path d="M200 55 C120 55 55 115 55 180 C55 220 75 255 105 275 L80 330 L145 290 C160 297 180 300 200 300 C280 300 345 245 345 180 C345 115 280 55 200 55 Z" fill="url(#g1)"/>
 
-  <!-- القلب الكبير (خط خارجي) -->
-  <path d="M200 245 C200 245 130 195 130 155 C130 130 150 115 170 115 C185 115 195 125 200 135 C205 125 215 115 230 115 C250 115 270 130 270 155 C270 195 200 245 200 245 Z"
-        fill="none" stroke="#1a1a3e" stroke-width="8" stroke-linejoin="round"/>
+  <!-- القلب الخارجي الكبير -->
+  <path d="M200 255 C200 255 120 200 120 157 C120 130 143 112 167 112 C183 112 196 122 200 135 C204 122 217 112 233 112 C257 112 280 130 280 157 C280 200 200 255 200 255 Z" fill="none" stroke="#1a1535" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
 
-  <!-- القلب الكبير (تعبئة) -->
-  <path d="M200 240 C200 240 135 192 135 155 C135 133 153 120 170 120 C185 120 195 128 200 138 C205 128 215 120 230 120 C247 120 265 133 265 155 C265 192 200 240 200 240 Z"
-        fill="url(#heart)" opacity="0.7"/>
+  <!-- القلب الخارجي تعبئة شفافة -->
+  <path d="M200 248 C200 248 127 196 127 158 C127 134 147 118 168 118 C183 118 194 127 200 138 C206 127 217 118 232 118 C253 118 273 134 273 158 C273 196 200 248 200 248 Z" fill="url(#g2)"/>
 
-  <!-- القلب الصغير بالداخل -->
-  <path d="M200 210 C200 210 168 185 168 168 C168 157 178 150 188 150 C194 150 198 154 200 158 C202 154 206 150 212 150 C222 150 232 157 232 168 C232 185 200 210 200 210 Z"
-        fill="#1a1a3e" opacity="0.85"/>
+  <!-- القلب الداخلي الصغير -->
+  <path d="M200 215 C200 215 162 188 162 170 C162 158 174 150 186 150 C193 150 197 155 200 160 C203 155 207 150 214 150 C226 150 238 158 238 170 C238 188 200 215 200 215 Z" fill="#1a1535"/>
 
-  <!-- نجوم متناثرة -->
-  <!-- نجمة 1 (أعلى يسار) -->
-  <g transform="translate(95, 75)" fill="white" opacity="0.9">
-    <rect x="-1.5" y="-7" width="3" height="14" rx="1.5"/>
-    <rect x="-7" y="-1.5" width="14" height="3" rx="1.5"/>
+  <!-- نجمة 1 - أعلى يسار كبيرة -->
+  <g fill="white">
+    <rect x="88" y="62" width="3.5" height="18" rx="1.8"/>
+    <rect x="80" y="69.5" width="18" height="3.5" rx="1.8"/>
   </g>
 
-  <!-- نجمة 2 (أعلى يسار صغيرة) -->
-  <g transform="translate(120, 50)" fill="white" opacity="0.6">
-    <rect x="-1" y="-5" width="2" height="10" rx="1"/>
-    <rect x="-5" y="-1" width="10" height="2" rx="1"/>
+  <!-- نجمة 2 - أعلى يسار صغيرة -->
+  <g fill="white" opacity="0.6">
+    <rect x="118" y="42" width="2.5" height="12" rx="1.2"/>
+    <rect x="113" y="46.5" width="12" height="2.5" rx="1.2"/>
   </g>
 
-  <!-- نجمة 3 (يمين فوق) -->
-  <g transform="translate(310, 90)" fill="#00e5ff" opacity="0.8">
-    <rect x="-1.5" y="-6" width="3" height="12" rx="1.5"/>
-    <rect x="-6" y="-1.5" width="12" height="3" rx="1.5"/>
+  <!-- نجمة 3 - يمين فوق -->
+  <g fill="white" opacity="0.85">
+    <rect x="318" y="95" width="3" height="15" rx="1.5"/>
+    <rect x="312" y="101" width="15" height="3" rx="1.5"/>
   </g>
 
-  <!-- نجمة 4 (يمين وسط) -->
-  <g transform="translate(340, 200)" fill="white" opacity="0.5">
-    <rect x="-1" y="-4" width="2" height="8" rx="1"/>
-    <rect x="-4" y="-1" width="8" height="2" rx="1"/>
+  <!-- نجمة 4 - يمين وسط صغيرة -->
+  <g fill="white" opacity="0.5">
+    <rect x="340" y="185" width="2" height="10" rx="1"/>
+    <rect x="336" y="189" width="10" height="2" rx="1"/>
   </g>
 
-  <!-- نجمة 5 (يسار وسط) -->
-  <g transform="translate(55, 220)" fill="white" opacity="0.7">
-    <rect x="-1" y="-5" width="2" height="10" rx="1"/>
-    <rect x="-5" y="-1" width="10" height="2" rx="1"/>
+  <!-- نجمة 5 - أسفل يمين -->
+  <g fill="white" opacity="0.7">
+    <rect x="305" y="265" width="2.5" height="12" rx="1.2"/>
+    <rect x="300" y="269.5" width="12" height="2.5" rx="1.2"/>
   </g>
 
-  <!-- نجمة 6 (أسفل يمين) -->
-  <g transform="translate(295, 270)" fill="#00e5ff" opacity="0.6">
-    <rect x="-1" y="-4" width="2" height="8" rx="1"/>
-    <rect x="-4" y="-1" width="8" height="2" rx="1"/>
+  <!-- نجمة 6 - يسار وسط -->
+  <g fill="white" opacity="0.55">
+    <rect x="48" y="195" width="2" height="10" rx="1"/>
+    <rect x="44" y="199" width="10" height="2" rx="1"/>
   </g>
 
-  <!-- كلمة JEERANI -->
-  <text x="200" y="380" text-anchor="middle" font-family="'Poppins', 'Arial', sans-serif" font-size="48" font-weight="800" fill="white" letter-spacing="6">JEERANI</text>
+  <!-- JEERANI -->
+  <text x="200" y="385" text-anchor="middle" font-family="'Poppins','Arial Black',sans-serif" font-size="52" font-weight="800" fill="white" letter-spacing="8">JEERANI</text>
 </svg>

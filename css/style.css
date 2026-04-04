@@ -157,9 +157,9 @@ body {
 
 /* ========== LANDING SCREEN ========== */
 .logo-img {
-    width: 90px;
-    height: 90px;
-    margin-bottom: 8px;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 10px;
 }
 .logo-text {
     font-size: 32px;
