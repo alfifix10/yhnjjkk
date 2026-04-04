@@ -80,17 +80,18 @@
     </div>
     <div class="content">
         <div class="stats">
+            <div class="stat"><b id="sAll">0</b><span>مستخدم</span></div>
             <div class="stat"><b id="sOn">0</b><span>متصل</span></div>
             <div class="stat"><b id="sCo">0</b><span>محادثة</span></div>
             <div class="stat"><b id="sBn">0</b><span>محظور</span></div>
         </div>
-        <input class="search" id="searchBox" placeholder="🔍 بحث في المحادثات..." oninput="searchConvs()">
+        <input class="search" id="searchBox" placeholder="🔍 بحث..." oninput="doSearch()">
         <div class="tabs">
-            <div class="tab active" data-tab="online">👥 المتصلين</div>
+            <div class="tab active" data-tab="users">👥 المستخدمين</div>
             <div class="tab" data-tab="convs">💬 المحادثات</div>
             <div class="tab" data-tab="banned">🚫 المحظورين</div>
         </div>
-        <div id="p-online" class="panel active"></div>
+        <div id="p-users" class="panel active"></div>
         <div id="p-convs" class="panel"></div>
         <div id="p-chat" class="panel"></div>
         <div id="p-banned" class="panel"></div>
@@ -101,7 +102,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
 <script>
 const PASS = 'Mm123';
-let logs = [], convs = {}, live = false, liveRef = null, searchQuery = '', chatHighlights = [];
+let logs = [], convs = {}, live = false, liveRef = null, searchQuery = '', chatHighlights = [], allUsers = {}, onlineIds = new Set();
 
 firebase.initializeApp({
     apiKey: "AIzaSyBxr265lCyx0GJw02oE9GQev8kBQRgiTZw",
@@ -158,8 +159,9 @@ function banUser(uid, name) {
 }
 function unbanUser(uid) { db.ref('banned/' + uid).remove(); load(); }
 
-function searchConvs() {
+function doSearch() {
     searchQuery = document.getElementById('searchBox').value.trim().toLowerCase();
+    renderUsers();
     renderConvs();
 }
 
@@ -171,24 +173,19 @@ function highlightText(text, query) {
 }
 
 function load() {
-    // المتصلين
+    // المتصلين (لتحديد من أونلاين)
     db.ref('online').on('value', snap => {
         const data = snap.val() || {};
-        const users = Object.entries(data);
-        document.getElementById('sOn').textContent = users.length;
-        let h = '<div class="card">';
-        if (!users.length) { h += '<div class="empty">لا يوجد أحد</div>'; }
-        else {
-            users.forEach(([id, u]) => {
-                h += '<div class="item"><div><span class="name">' + esc(u.name||'—') + '</span><span class="dot"></span>';
-                if (u.acc) h += '<span style="font-size:9px;color:var(--m);margin-right:6px">' + Math.round(u.acc) + 'm</span>';
-                h += '<div class="id">' + id.slice(0,14) + '</div></div>';
-                h += '<div style="display:flex;gap:6px;align-items:center"><span class="time">' + fmt(u.t) + '</span>';
-                h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + id + '" data-name="' + esc(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div></div>';
-            });
-        }
-        h += '</div>';
-        document.getElementById('p-online').innerHTML = h;
+        onlineIds = new Set(Object.keys(data));
+        document.getElementById('sOn').textContent = onlineIds.size;
+        renderUsers();
+    });
+
+    // جميع المستخدمين
+    db.ref('users').on('value', snap => {
+        allUsers = snap.val() || {};
+        document.getElementById('sAll').textContent = Object.keys(allUsers).length;
+        renderUsers();
     });
 
     // المحظورين
@@ -227,6 +224,38 @@ function load() {
         });
         renderConvs();
     });
+}
+
+function renderUsers() {
+    let entries = Object.entries(allUsers);
+    // ترتيب: المتصلين أولاً، ثم حسب آخر ظهور
+    entries.sort((a, b) => {
+        const aOn = onlineIds.has(a[0]) ? 1 : 0;
+        const bOn = onlineIds.has(b[0]) ? 1 : 0;
+        if (aOn !== bOn) return bOn - aOn;
+        return (b[1].lastSeen||0) - (a[1].lastSeen||0);
+    });
+    // فلترة بالبحث
+    if (searchQuery) {
+        entries = entries.filter(([id, u]) => (u.name||'').toLowerCase().includes(searchQuery) || id.toLowerCase().includes(searchQuery));
+    }
+    let h = '<div class="card">';
+    if (!entries.length) { h += '<div class="empty">لا يوجد مستخدمين</div>'; }
+    else {
+        entries.forEach(([id, u]) => {
+            const isOn = onlineIds.has(id);
+            const dotColor = isOn ? 'var(--a)' : '#555';
+            const statusText = isOn ? 'متصل الآن' : 'آخر ظهور: ' + fmtFull(u.lastSeen);
+            h += '<div class="item"><div><span class="name">' + esc(u.name||'—') + '</span>';
+            h += '<span style="width:7px;height:7px;background:' + dotColor + ';border-radius:50%;display:inline-block;margin-right:5px"></span>';
+            h += '<div class="id">' + id.slice(0,14) + ' · ' + statusText + '</div>';
+            if (u.firstSeen) h += '<div style="font-size:8px;color:var(--m)">أول دخول: ' + fmtFull(u.firstSeen) + '</div>';
+            h += '</div>';
+            h += '<button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + id + '" data-name="' + esc(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div>';
+        });
+    }
+    h += '</div>';
+    document.getElementById('p-users').innerHTML = h;
 }
 
 function renderConvs() {

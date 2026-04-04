@@ -448,6 +448,17 @@ function enterPeopleScreen() {
     myPresenceRef.set(presenceData);
     myPresenceRef.onDisconnect().remove();
 
+    // حفظ بيانات المستخدم بشكل دائم في users/
+    db.ref('users/' + myId).once('value', function(snap) {
+        var userData = { name: myName, lastSeen: firebase.database.ServerValue.TIMESTAMP };
+        if (!snap.exists() || !snap.val().firstSeen) {
+            userData.firstSeen = firebase.database.ServerValue.TIMESTAMP;
+        }
+        db.ref('users/' + myId).update(userData);
+    });
+    // تحديث آخر ظهور عند قطع الاتصال
+    db.ref('users/' + myId + '/lastSeen').onDisconnect().set(firebase.database.ServerValue.TIMESTAMP);
+
     // [FIX 2] heartbeat واحد فقط
     heartbeatInterval = setInterval(() => {
         if (myPresenceRef) myPresenceRef.update({ t: firebase.database.ServerValue.TIMESTAMP });

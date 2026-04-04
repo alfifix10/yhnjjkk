@@ -24,6 +24,13 @@
         }
       }
     },
+    "users": {
+      ".read": true,
+      "$uid": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['name', 'lastSeen'])"
+      }
+    },
     "banned": {
       ".read": true,
       "$uid": {
