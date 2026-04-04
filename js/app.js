@@ -1176,3 +1176,4 @@ window.addEventListener('storage', function(e) {
     }
 });
 localStorage.setItem('jeerani_active_tab', Date.now());
+// Jeerani v3.0
