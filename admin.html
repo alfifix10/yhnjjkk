@@ -10,6 +10,7 @@
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Cairo',sans-serif; background:var(--d); color:var(--t); min-height:100vh; }
         .login { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:14px; }
+        .login-frame { background:var(--d2); border:1px solid var(--b); border-radius:24px; padding:40px 36px 32px; display:flex; flex-direction:column; align-items:center; gap:14px; box-shadow:0 16px 60px rgba(0,0,0,0.5); }
         .login-logo { font-family:'Poppins'; font-size:28px; font-weight:800; color:#fff; letter-spacing:2px; }
         .login input { padding:14px 20px; border-radius:14px; border:2px solid var(--b); background:var(--d2); color:var(--t); font-family:'Cairo'; font-size:16px; width:260px; text-align:center; outline:none; }
         .login input:focus { border-color:var(--p); }
@@ -65,10 +66,12 @@
 <body>
 
 <div class="login" id="login">
-    <img src="assets/logo.png" alt="Jeerani" style="width:200px;height:auto">
-    <div style="color:var(--m);font-size:13px">لوحة التحكم</div>
-    <input type="password" id="pass" placeholder="كلمة المرور">
-    <button onclick="auth()">دخول</button>
+    <div class="login-frame">
+        <img src="assets/logo.png" alt="Jeerani" style="width:200px;height:auto">
+        <div style="color:var(--m);font-size:13px">لوحة التحكم</div>
+        <input type="password" id="pass" placeholder="كلمة المرور">
+        <button onclick="auth()">دخول</button>
+    </div>
 </div>
 
 <div class="app" id="app">
