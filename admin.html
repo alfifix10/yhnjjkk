@@ -206,7 +206,7 @@ function load() {
                 h += '<div class="item"><div><span class="name">' + esc(u.name || '—') + '</span><span class="dot"></span>';
                 if (u.acc) h += '<span style="font-size:9px;color:var(--m);margin-right:6px">GPS: ' + Math.round(u.acc) + 'm</span>';
                 h += '<div class="id">' + id.slice(0, 14) + '</div></div>';
-                h += '<div style="display:flex;gap:6px;align-items:center"><span class="time">' + fmt(u.t) + '</span><button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" onclick="banUser(\'' + id + '\',\'' + esc(u.name||'') + '\')">🚫</button></div></div>';
+                h += '<div style="display:flex;gap:6px;align-items:center"><span class="time">' + fmt(u.t) + '</span><button class="btn" style="font-size:10px;padding:2px 6px;color:var(--r);border-color:var(--r)" data-uid="' + id + '" data-name="' + esc(u.name||'') + '" onclick="banUser(this.dataset.uid,this.dataset.name)">🚫</button></div></div>';
             });
         }
         h += '</div>';
