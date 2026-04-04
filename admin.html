@@ -257,10 +257,10 @@ function initListeners() {
         renderUsers();
     });
 
-    // المحظورين — realtime
+    // المحظورين — realtime (إخفاء مدخلات البصمة — تظهر فقط المدخلات بالـ ID الكامل)
     db.ref('banned').on('value', snap => {
         const data = snap.val() || {};
-        const list = Object.entries(data);
+        const list = Object.entries(data).filter(([uid, u]) => !u.linkedTo);
         document.getElementById('sBn').textContent = list.length;
         let h = '<div class="card">';
         if (!list.length) { h += '<div class="empty">لا يوجد محظورين</div>'; }
