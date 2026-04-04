@@ -115,11 +115,24 @@ firebase.initializeApp({
 });
 const db = firebase.database();
 
+let authAttempts = 0;
 function auth() {
-    const val = document.getElementById('pass').value;
+    const inp = document.getElementById('pass');
+    const val = inp.value;
     if (hashPass(val) === PASS_HASH) {
+        authAttempts = 0;
         try { localStorage.setItem('jeerani_admin', PASS_HASH); } catch(e) {}
         showApp();
+    } else {
+        authAttempts++;
+        inp.style.borderColor = 'var(--r)';
+        inp.placeholder = 'كلمة المرور خاطئة';
+        inp.value = '';
+        setTimeout(() => { inp.style.borderColor = ''; inp.placeholder = 'كلمة المرور'; }, 2000);
+        if (authAttempts >= 5) {
+            document.querySelector('.login button').disabled = true;
+            setTimeout(() => { document.querySelector('.login button').disabled = false; authAttempts = 0; }, 30000);
+        }
     }
 }
 function showApp() {

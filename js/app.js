@@ -78,8 +78,6 @@ var myLat = 0;
 var myLng = 0;
 var currentChatUser = null;
 var unreadFrom = new Set();
-var myOldIds;
-try { myOldIds = new Set(JSON.parse(localStorage.getItem('jiranak_old_ids') || '[]')); } catch(e) { myOldIds = new Set(); }
 var blockedUsers;
 try { blockedUsers = new Set(JSON.parse(localStorage.getItem('jiranak_blocked') || '[]')); } catch(e) { blockedUsers = new Set(); }
 var lastMsgTime = 0;
@@ -375,9 +373,10 @@ function requestLocation() {
             startGeoWatch();
         },
         () => {
-            // GPS مرفوض أو فشل — ادخل بدون موقع
+            // GPS مرفوض أو فشل — ادخل بدون موقع مع محاولة GPS بالخلفية
             enteredFromGeo = true;
             enterPeopleScreen();
+            startGeoWatch();
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -446,6 +445,7 @@ function enterPeopleScreen() {
     history.pushState({ screen: 'people' }, '', '');
 
     // مراقبة الحظر أثناء الاستخدام — لو حظره الأدمن يطلع فوراً
+    db.ref('banned/' + myId).off(); // تنظيف أي listener سابق
     db.ref('banned/' + myId).on('value', function(snap) {
         if (snap.exists()) {
             db.ref('banned/' + myId).off();
@@ -471,13 +471,10 @@ function enterPeopleScreen() {
     presenceRef = db.ref('online');
     myPresenceRef = presenceRef.child(myId);
 
-    // تنظيف هوياتي القديمة من Firebase
-    myOldIds.forEach(function(oldId) {
-        db.ref('online/' + oldId).remove();
-    });
 
     // مراقبة اتصال Firebase — يظهر البانر فقط لو انقطع بعد ما كان متصل
     var wasConnected = false;
+    db.ref('.info/connected').off(); // تنظيف أي listener سابق
     db.ref('.info/connected').on('value', function(snap) {
         var banner = document.getElementById('offlineBanner');
         if (snap.val() === true) {
@@ -621,7 +618,7 @@ function renderPeopleFromData(data) {
     var allUsers = [];
     Object.entries(data).forEach(function(entry) {
         var id = entry[0], u = entry[1];
-        if (id !== myId && !myOldIds.has(id) && !blockedUsers.has(id) && u.name) {
+        if (id !== myId && !blockedUsers.has(id) && u.name) {
             u.id = id;
             // حساب المسافة لكل مستخدم
             if (myGpsReady && u.lat && u.lng) {
@@ -997,8 +994,9 @@ function cleanup() {
     if (msgListener) { db.ref('msgs/' + myId).off(); msgListener = null; }
     if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
     if (geoWatchId !== null) { navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
-    // تنظيف مراقبة الحظر
+    // تنظيف مراقبة الحظر والاتصال
     try { db.ref('banned/' + myId).off(); } catch(e) {}
+    try { db.ref('.info/connected').off(); } catch(e) {}
     unreadFrom.clear();
     currentChatUser = null;
 }
