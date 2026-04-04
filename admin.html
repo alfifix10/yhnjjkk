@@ -292,7 +292,8 @@ function loadLogs() {
                 if (!uid || uid === 'admin') return;
                 if (!allUsers[uid]) allUsers[uid] = { name: name, firstSeen: m.t, lastSeen: m.t };
                 else {
-                    if (name) allUsers[uid].name = name;
+                    // لا نكتب فوق الاسم لو المستخدم متصل (online عنده الاسم الأحدث)
+                    if (name && !onlineIds.has(uid)) allUsers[uid].name = name;
                     if (m.t < allUsers[uid].firstSeen) allUsers[uid].firstSeen = m.t;
                     if (m.t > allUsers[uid].lastSeen) allUsers[uid].lastSeen = m.t;
                 }
