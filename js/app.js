@@ -521,22 +521,23 @@ function enterPeopleScreen() {
 
     // مراقبة اتصال Firebase — يظهر البانر فقط لو انقطع بعد ما كان متصل
     let wasConnected = false;
+    let offlineTimer = null;
     db.ref('.info/connected').on('value', function(snap) {
         let banner = document.getElementById('offlineBanner');
         if (snap.val() === true) {
-            if (wasConnected) {
-                // عاد الاتصال — نعيد تسجيل الحضور
-                if (myPresenceRef) {
-                    let presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
-                    if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
-                    myPresenceRef.set(presenceData);
-                }
+            if (offlineTimer) { clearTimeout(offlineTimer); offlineTimer = null; }
+            if (wasConnected && myPresenceRef) {
+                let presenceData = { name: myName, t: firebase.database.ServerValue.TIMESTAMP };
+                if (myLat !== 0) { presenceData.lat = myLat; presenceData.lng = myLng; }
+                myPresenceRef.set(presenceData);
             }
             wasConnected = true;
             if (banner) banner.style.display = 'none';
             if (myPresenceRef) myPresenceRef.onDisconnect().remove();
         } else if (wasConnected && banner) {
-            banner.style.display = 'flex';
+            offlineTimer = setTimeout(function() {
+                banner.style.display = 'flex';
+            }, 3000);
         }
     });
 
