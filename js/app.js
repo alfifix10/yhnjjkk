@@ -969,6 +969,10 @@ function startChat(userId, userName, uLat, uLng) {
         let el = document.getElementById('msgInput');
         let text = el.value.trim();
         if (!text || text.length > 500) return;
+        if (/https?:\/\/|www\.|\.com|\.net|\.org|\.io/i.test(text)) {
+            addSystemMsg('⚠️ إرسال الروابط غير مسموح');
+            return;
+        }
         let now = Date.now();
         // حد 500ms بين كل رسالة
         if (now - lastMsgTime < 500) {
