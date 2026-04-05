@@ -430,7 +430,7 @@ body {
     border-radius: 20px;
     font-size: 12px;
     font-family: 'Cairo', sans-serif;
-    z-index: 999;
+    z-index: 99999;
     pointer-events: none;
     animation: toastFade 2s ease forwards;
     white-space: nowrap;
