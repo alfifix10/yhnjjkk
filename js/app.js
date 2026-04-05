@@ -622,7 +622,7 @@ function enterPeopleScreen() {
             inputValue: myName,
             confirmText: 'تغيير',
             onConfirm: (val) => {
-                if (val.length > 0 && val.length <= 20) {
+                if (val.length > 0 && val.length <= 12) {
                     myName = val;
                     localStorage.setItem('jiranak_name', myName);
                     document.getElementById('myName').textContent = myName;
