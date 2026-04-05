@@ -385,7 +385,8 @@ body {
 
 /* ========== TOPBAR ========== */
 .topbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
     align-items: center;
     padding: 10px 12px;
     background: var(--dark-2);
@@ -399,16 +400,14 @@ body {
     display: flex;
     align-items: center;
     gap: 4px;
-    min-width: 0;
-    flex: 1;
     justify-content: flex-end;
     overflow: hidden;
+    min-width: 0;
 }
 .topbar-status {
     display: flex;
     align-items: center;
     gap: 5px;
-    flex-shrink: 0;
 }
 .back-btn {
     width: 36px;
