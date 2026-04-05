@@ -209,6 +209,9 @@ var bellEnabled = false;
 try { bellEnabled = localStorage.getItem('jiranak_bell') === 'on'; } catch(e) {}
 var bellKnownUsers = new Set();
 var bellInitialized = false;
+var bellLastAlert = 0;
+var bellCooldownUsers = {};  // uid → timestamp آخر تنبيه
+const BELL_COOLDOWN_MS = 300000;  // 5 دقائق بين كل تنبيه عن نفس الشخص
 
 function toggleBell() {
     if (!bellEnabled) {
@@ -302,13 +305,21 @@ function checkBellAlert(onlineData) {
         bellInitialized = true;
         return;
     }
-    // نشوف لو فيه مستخدمين جدد قريبين (لم يكونوا قريبين قبل)
+    // نشوف لو فيه مستخدمين جدد (مع فترة هدوء 5 دقائق لكل شخص)
+    var now = Date.now();
     var newUsers = 0;
     nearbyNow.forEach(function(id) {
-        if (!bellKnownUsers.has(id)) newUsers++;
+        var lastAlerted = bellCooldownUsers[id] || 0;
+        if (!bellKnownUsers.has(id) && (now - lastAlerted > BELL_COOLDOWN_MS)) {
+            newUsers++;
+            bellCooldownUsers[id] = now;
+        }
     });
     if (newUsers > 0) bellNotify(nearbyNow.size);
-    // تحديث القائمة — فقط القريبين حالياً (البعيدين يُزالون)
+    // تنظيف cooldown للمستخدمين القدامى (أكثر من 30 دقيقة)
+    Object.keys(bellCooldownUsers).forEach(function(uid) {
+        if (now - bellCooldownUsers[uid] > 1800000) delete bellCooldownUsers[uid];
+    });
     bellKnownUsers = nearbyNow;
 }
 
