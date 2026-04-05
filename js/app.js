@@ -288,7 +288,7 @@ function checkBellAlert(onlineData) {
         var id = entry[0], u = entry[1];
         if (id === myId || !u.lat || !u.lng) return;
         var dist = getDistance(u.lat, u.lng);
-        if (dist <= 100) nearbyNow.add(id);
+        if (dist <= 5) nearbyNow.add(id);
     });
     // أول مرة — نحفظ القائمة بدون إشعار
     if (!bellInitialized) {
@@ -601,7 +601,7 @@ function enterPeopleScreen() {
         db.ref('banned/' + myFingerprint).off();
         cleanup();
         showBannedMessage();
-        setTimeout(function() { showScreen('landingScreen'); }, 5000);
+        setTimeout(function() { initLanding(); }, 5000);
     }
     db.ref('banned/' + myId).off();
     db.ref('banned/' + myFingerprint).off();
@@ -1002,11 +1002,11 @@ function startChat(userId, userName, uLat, uLng) {
         // حد يومي
         var today = new Date().toDateString();
         if (dailyMsgDate !== today) { dailyMsgCount = 0; dailyMsgDate = today; }
-        dailyMsgCount++;
-        if (dailyMsgCount > DAILY_MSG_LIMIT) {
+        if (dailyMsgCount >= DAILY_MSG_LIMIT) {
             addSystemMsg('⚠️ وصلت الحد اليومي (' + DAILY_MSG_LIMIT + ' رسالة). حاول غداً');
             return;
         }
+        dailyMsgCount++;
         saveDailyCount();
         lastMsgTime = now;
 
@@ -1122,6 +1122,7 @@ function addSystemMsg(text) {
 // دالة موحدة للخروج من الدردشة
 function leaveChat() {
     if (partnerPresenceRef) { partnerPresenceRef.off(); partnerPresenceRef = null; }
+    if (partnerTypingRef) { partnerTypingRef.off(); partnerTypingRef = null; }
     // تنظيف typing + read
     try {
         if (currentChatUser) {
@@ -1133,6 +1134,8 @@ function leaveChat() {
     currentChatUser = null;
     currentScreen = 'people';
     showScreen('peopleScreen');
+    // تحديث قائمة الجيران
+    if (presenceRef) presenceRef.once('value', function(s) { renderPeopleFromData(s.val() || {}); });
 }
 
 window.addEventListener('popstate', (e) => {
@@ -1161,7 +1164,7 @@ function getDistance(lat2, lng2) {
 function esc(text) {
     const d = document.createElement('div');
     d.textContent = text;
-    return d.innerHTML;
+    return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function shareLink() {
@@ -1173,6 +1176,12 @@ function shareLink() {
             showModal({
                 title: 'تم النسخ',
                 message: 'تم نسخ الرابط! شاركه مع أصدقائك.',
+                buttons: [{ text: 'حسناً', cls: 'modal-btn-primary', action: () => {} }]
+            });
+        }).catch(() => {
+            showModal({
+                title: 'مشاركة',
+                message: url,
                 buttons: [{ text: 'حسناً', cls: 'modal-btn-primary', action: () => {} }]
             });
         });

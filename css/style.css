@@ -141,18 +141,13 @@ body {
         padding: 20px 16px 16px;
         margin: 8px;
     }
-    .logo-text { font-size: 28px; }
-    .logo-en { font-size: 13px; letter-spacing: 5px; }
     .title { font-size: 22px; margin-bottom: 2px; }
     .subtitle { font-size: 13px; margin-bottom: 10px; }
-    .features-mini { margin-bottom: 10px; gap: 6px; }
-    .features-mini span { font-size: 11px; padding: 5px 10px; }
     .input-group { gap: 8px; margin-bottom: 8px; }
     .input-group input { padding: 12px 14px; font-size: 14px; }
     .btn-primary { padding: 12px 24px; font-size: 14px; }
     .random-names { margin-bottom: 8px; gap: 5px; }
     .name-chip { font-size: 11px; padding: 4px 10px; }
-    .note { font-size: 10px; margin-top: 4px; }
 }
 
 /* ========== LANDING SCREEN ========== */
@@ -161,34 +156,6 @@ body {
     height: auto;
     margin-bottom: -20px;
 }
-.logo-text {
-    font-size: 32px;
-    font-weight: 900;
-    margin-bottom: 24px;
-    text-align: center;
-    line-height: 1;
-    letter-spacing: 3px;
-    direction: ltr;
-    color: #fff;
-    font-family: 'Poppins', sans-serif;
-}
-.logo-dot {
-    letter-spacing: 0;
-    opacity: 0.4;
-    font-weight: 700;
-}
-.logo-en {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 11px;
-    color: var(--accent);
-    margin-top: 6px;
-    text-indent: 11px;
-    direction: ltr;
-    padding-right: 12px;
-}
-
 .title {
     font-size: 28px;
     font-weight: 700;
@@ -205,42 +172,6 @@ body {
     margin-bottom: 16px;
     text-align: center;
 }
-
-.features-mini {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 16px;
-}
-.features-mini span {
-    padding: 8px 16px;
-    background: var(--glass);
-    border: 1px solid var(--glass-border);
-    border-radius: 50px;
-    font-size: 13px;
-    color: var(--text-muted);
-    white-space: nowrap;
-}
-
-.city-select {
-    width: 100%;
-    padding: 14px 18px;
-    border-radius: 16px;
-    border: 2px solid var(--glass-border);
-    background: var(--dark-2);
-    color: var(--text);
-    font-family: 'Cairo', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    outline: none;
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    transition: var(--transition);
-}
-.city-select:focus { border-color: var(--primary); }
-.city-select option { background: var(--dark-2); color: var(--text); }
 
 .input-group {
     display: flex;
@@ -340,13 +271,6 @@ body {
     border-color: var(--primary);
 }
 
-.note {
-    font-size: 11px;
-    color: var(--text-muted);
-    opacity: 0.6;
-    margin-top: 8px;
-}
-
 .searching {
     display: flex;
     flex-direction: column;
@@ -369,19 +293,6 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
-
-.location-error {
-    width: 100%;
-    max-width: 440px;
-    background: rgba(225, 112, 85, 0.1);
-    border: 1px solid rgba(225, 112, 85, 0.3);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 16px;
-    text-align: center;
-}
-.location-error p { margin-bottom: 6px; color: #e17055; font-size: 14px; }
-.location-error .hint { color: var(--text-muted); font-size: 12px; margin-bottom: 0; }
 
 /* ========== TOPBAR ========== */
 .topbar {
@@ -607,7 +518,8 @@ body {
 .no-people p { color: var(--text-muted); margin-bottom: 8px; }
 
 /* ========== CHAT SCREEN ========== */
-.chat-topbar { gap: 12px; }
+.chat-topbar { flex-direction: row; align-items: center; gap: 12px; }
+.chat-topbar .topbar-info { flex: 1; }
 .chat-with-name {
     font-weight: 700;
     font-size: 16px;
@@ -653,15 +565,7 @@ body {
     margin-right: 4px;
 }
 
-.ephemeral-badge {
-    padding: 4px 12px;
-    background: rgba(253, 121, 168, 0.12);
-    border: 1px solid rgba(253, 121, 168, 0.2);
-    border-radius: 50px;
-    font-size: 11px;
-    color: var(--accent-2);
-    font-weight: 600;
-}
+
 
 .chat-messages {
     flex: 1;
@@ -810,11 +714,8 @@ body {
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
-    .logo-big { font-size: 56px; margin-bottom: 4px; }
     .title { font-size: 34px; }
     .subtitle { font-size: 15px; margin-bottom: 20px; }
-    .features-mini { gap: 8px; margin-bottom: 24px; }
-    .features-mini span { font-size: 12px; padding: 6px 12px; }
     .input-group { max-width: 100%; }
     .input-group input { padding: 14px 16px; font-size: 15px; }
     .btn-primary { padding: 14px 28px; font-size: 15px; }
@@ -827,7 +728,6 @@ body {
 @media (max-width: 380px) {
     .title { font-size: 28px; }
     .subtitle { font-size: 14px; }
-    .features-mini span { font-size: 11px; padding: 5px 10px; }
 }
 
 /* [FIX 1] زر تعديل الاسم */
