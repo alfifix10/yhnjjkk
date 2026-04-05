@@ -386,13 +386,23 @@ body {
 /* ========== TOPBAR ========== */
 .topbar {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 20px;
+    flex-direction: column;
+    padding: 10px 16px 8px;
     background: var(--dark-2);
     border-bottom: 1px solid var(--glass-border);
     z-index: 20;
     flex-shrink: 0;
+    gap: 6px;
+}
+.topbar-row-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.topbar-row-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 .back-btn {
     width: 36px;
@@ -409,14 +419,9 @@ body {
     transition: var(--transition);
 }
 .back-btn:hover { background: rgba(255,255,255,0.1); }
-.topbar-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 .my-name {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 17px;
 }
 .online-badge {
     font-size: 11px;
