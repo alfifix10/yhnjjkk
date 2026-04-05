@@ -302,12 +302,13 @@ function checkBellAlert(onlineData) {
         bellInitialized = true;
         return;
     }
-    // نشوف لو فيه مستخدمين جدد
+    // نشوف لو فيه مستخدمين جدد قريبين (لم يكونوا قريبين قبل)
     var newUsers = 0;
     nearbyNow.forEach(function(id) {
         if (!bellKnownUsers.has(id)) newUsers++;
     });
     if (newUsers > 0) bellNotify(nearbyNow.size);
+    // تحديث القائمة — فقط القريبين حالياً (البعيدين يُزالون)
     bellKnownUsers = nearbyNow;
 }
 
