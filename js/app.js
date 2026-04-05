@@ -654,6 +654,7 @@ function enterPeopleScreen() {
         });
     };
 
+    document.getElementById('shareBtn')?.addEventListener('click', shareLink);
 }
 
 function renderPeopleFromData(data) {

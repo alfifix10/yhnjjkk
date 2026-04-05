@@ -387,27 +387,16 @@ body {
 .topbar {
     display: flex;
     align-items: center;
-    padding: 10px 12px;
+    justify-content: space-between;
+    padding: 14px 20px;
     background: var(--dark-2);
     border-bottom: 1px solid var(--glass-border);
     z-index: 20;
     flex-shrink: 0;
-    gap: 8px;
-    height: 52px;
-    overflow: hidden;
-}
-.topbar-name {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow: hidden;
 }
 .back-btn {
     width: 36px;
     height: 36px;
-    min-width: 36px;
     border-radius: 10px;
     border: 1px solid var(--glass-border);
     background: var(--glass);
@@ -418,31 +407,24 @@ body {
     align-items: center;
     justify-content: center;
     transition: var(--transition);
-    flex: 0 0 auto;
 }
 .back-btn:hover { background: rgba(255,255,255,0.1); }
+.topbar-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 .my-name {
-    display: block;
     font-weight: 700;
-    font-size: 15px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
+    font-size: 16px;
 }
 .online-badge {
-    display: inline-block;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--accent);
     font-weight: 600;
     background: rgba(0, 206, 201, 0.1);
-    padding: 2px 8px;
+    padding: 2px 10px;
     border-radius: 50px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 110px;
-    vertical-align: middle;
 }
 .pulse-dot {
     width: 8px;
