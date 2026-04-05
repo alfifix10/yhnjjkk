@@ -191,6 +191,83 @@ function getAudioContext() {
 var soundEnabled = true;
 try { soundEnabled = localStorage.getItem('jiranak_sound') !== 'off'; } catch(e) {}
 
+// === نظام الجرس — إشعار عند وجود متصلين قريبين ===
+var bellEnabled = false;
+try { bellEnabled = localStorage.getItem('jiranak_bell') === 'on'; } catch(e) {}
+var bellKnownUsers = new Set();
+var bellInitialized = false;
+
+function toggleBell() {
+    bellEnabled = !bellEnabled;
+    try { localStorage.setItem('jiranak_bell', bellEnabled ? 'on' : 'off'); } catch(e) {}
+    var btn = document.getElementById('bellToggle');
+    if (btn) btn.textContent = bellEnabled ? '🔔' : '🔕';
+    // طلب إذن الإشعارات
+    if (bellEnabled && 'Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+
+function playBellSound() {
+    try {
+        var ctx = getAudioContext();
+        var t = ctx.currentTime;
+        // صوت جرس مميز
+        [800, 1000, 1200].forEach(function(freq, i) {
+            var o = ctx.createOscillator();
+            var g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.type = 'sine';
+            o.frequency.setValueAtTime(freq, t + i * 0.15);
+            g.gain.setValueAtTime(0.3, t + i * 0.15);
+            g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.15 + 0.3);
+            o.start(t + i * 0.15);
+            o.stop(t + i * 0.15 + 0.3);
+        });
+    } catch(e) {}
+}
+
+function bellNotify(count) {
+    // صوت
+    playBellSound();
+    // اهتزاز
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+    // إشعار المتصفح
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            new Notification('جيراني 🔔', {
+                body: count + ' جار قريب متصل الآن!',
+                icon: 'assets/logo.png',
+                tag: 'jeerani-bell'
+            });
+        } catch(e) {}
+    }
+}
+
+function checkBellAlert(onlineData) {
+    if (!bellEnabled || !myGpsReady) return;
+    var nearbyNow = new Set();
+    Object.entries(onlineData).forEach(function(entry) {
+        var id = entry[0], u = entry[1];
+        if (id === myId || !u.lat || !u.lng) return;
+        var dist = getDistance(u.lat, u.lng);
+        if (dist <= 100) nearbyNow.add(id);
+    });
+    // أول مرة — نحفظ القائمة بدون إشعار
+    if (!bellInitialized) {
+        bellKnownUsers = nearbyNow;
+        bellInitialized = true;
+        return;
+    }
+    // نشوف لو فيه مستخدمين جدد
+    var newUsers = 0;
+    nearbyNow.forEach(function(id) {
+        if (!bellKnownUsers.has(id)) newUsers++;
+    });
+    if (newUsers > 0) bellNotify(nearbyNow.size);
+    bellKnownUsers = nearbyNow;
+}
+
 function toggleSound() {
     soundEnabled = !soundEnabled;
     try { localStorage.setItem('jiranak_sound', soundEnabled ? 'on' : 'off'); } catch(e) {}
@@ -557,6 +634,7 @@ function enterPeopleScreen() {
             if (spinner) spinner.style.display = 'none';
             document.getElementById('onlineCount').textContent = '✅ متصل';
             renderPeopleFromData(onlineData);
+            checkBellAlert(onlineData);
         }, 300);
     }
 
@@ -613,6 +691,10 @@ function enterPeopleScreen() {
         localStorage.removeItem('jiranak_name');
         initLanding();
     };
+
+    // تحديث أيقونة الجرس
+    var bellBtn = document.getElementById('bellToggle');
+    if (bellBtn) bellBtn.textContent = bellEnabled ? '🔔' : '🔕';
 
     document.getElementById('editNameBtn').onclick = () => {
         showModal({
