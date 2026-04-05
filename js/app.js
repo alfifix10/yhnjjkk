@@ -78,14 +78,14 @@ var myFingerprint = getDeviceFingerprint();
 // فحص الحظر بالـ ID + البصمة
 function checkBanned(callback) {
     if (!db) return callback(false);
+    var done = false;
+    function finish(val) { if (!done) { done = true; callback(val); } }
     db.ref('banned/' + myId).once('value').then(function(snap1) {
-        if (snap1.exists()) return callback(true);
-        return db.ref('banned/' + myFingerprint).once('value');
-    }).then(function(snap2) {
-        if (snap2) callback(snap2.exists());
-    }).catch(function() {
-        callback(false);
-    });
+        if (snap1.exists()) return finish(true);
+        db.ref('banned/' + myFingerprint).once('value').then(function(snap2) {
+            finish(snap2.exists());
+        }).catch(function() { finish(false); });
+    }).catch(function() { finish(false); });
 }
 var myName = '';
 var myLat = 0;
