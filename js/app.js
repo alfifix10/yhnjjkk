@@ -77,11 +77,14 @@ var myFingerprint = getDeviceFingerprint();
 
 // فحص الحظر بالـ ID + البصمة
 function checkBanned(callback) {
-    db.ref('banned/' + myId).once('value', function(snap1) {
+    if (!db) return callback(false);
+    db.ref('banned/' + myId).once('value').then(function(snap1) {
         if (snap1.exists()) return callback(true);
-        db.ref('banned/' + myFingerprint).once('value', function(snap2) {
-            callback(snap2.exists());
-        });
+        return db.ref('banned/' + myFingerprint).once('value');
+    }).then(function(snap2) {
+        if (snap2) callback(snap2.exists());
+    }).catch(function() {
+        callback(false);
     });
 }
 var myName = '';
