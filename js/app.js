@@ -288,7 +288,7 @@ function checkBellAlert(onlineData) {
         var id = entry[0], u = entry[1];
         if (id === myId || !u.lat || !u.lng) return;
         var dist = getDistance(u.lat, u.lng);
-        if (dist <= 5) nearbyNow.add(id);
+        if (dist <= 100) nearbyNow.add(id);
     });
     // أول مرة — نحفظ القائمة بدون إشعار
     if (!bellInitialized) {
