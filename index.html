@@ -102,18 +102,15 @@
     </div>
     <div id="peopleScreen" class="screen">
         <div class="topbar">
-            <div class="topbar-right">
-                <span id="myName" class="my-name"></span>
-                <button id="editNameBtn" class="edit-name-btn" title="تعديل الاسم">✏️</button>
-            </div>
-            <div class="topbar-center">
-                <span id="onlineCount" class="online-badge">0 جار متصل</span>
+            <button id="backToLanding" class="back-btn" title="رجوع">↩</button>
+            <button id="soundToggle" onclick="toggleSound()" class="back-btn" title="كتم/تفعيل الصوت">🔊</button>
+            <div class="topbar-status">
+                <span id="onlineCount" class="online-badge">0</span>
                 <div class="pulse-dot"></div>
             </div>
-            <div class="topbar-left">
-                <button id="soundToggle" onclick="toggleSound()" class="topbar-icon-btn" title="كتم/تفعيل الصوت">🔊</button>
-                <button id="shareBtn" class="topbar-icon-btn" title="مشاركة">📤</button>
-                <button id="backToLanding" class="back-btn" title="رجوع">↩</button>
+            <div class="topbar-name">
+                <span id="myName" class="my-name"></span>
+                <button id="editNameBtn" class="edit-name-btn" title="تعديل الاسم">✏️</button>
             </div>
         </div>
         <div class="screen-content people-content">

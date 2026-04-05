@@ -387,52 +387,28 @@ body {
 .topbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 10px 12px;
     background: var(--dark-2);
     border-bottom: 1px solid var(--glass-border);
     z-index: 20;
     flex-shrink: 0;
-    gap: 6px;
-    min-height: 50px;
-    flex-wrap: wrap;
+    gap: 8px;
+    height: 52px;
 }
-.topbar-right {
+.topbar-name {
     display: flex;
     align-items: center;
     gap: 4px;
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 1;
+    justify-content: flex-end;
     overflow: hidden;
 }
-.topbar-center {
+.topbar-status {
     display: flex;
     align-items: center;
-    gap: 6px;
-    flex: 0 0 auto;
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    padding-top: 2px;
-}
-.topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex: 0 0 auto;
-}
-.topbar-icon-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
-    line-height: 1;
-}
-@media(min-width:500px) {
-    .topbar { flex-wrap: nowrap; }
-    .topbar-center { order: 0; width: auto; padding-top: 0; }
+    gap: 5px;
+    flex-shrink: 0;
 }
 .back-btn {
     width: 36px;
@@ -455,6 +431,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    direction: rtl;
 }
 .online-badge {
     font-size: 10px;
