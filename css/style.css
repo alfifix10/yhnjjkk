@@ -395,7 +395,9 @@ body {
     gap: 8px;
     height: 52px;
     overflow: hidden;
+    width: 100%;
 }
+.topbar > * { flex-shrink: 0; }
 .topbar-name {
     display: flex;
     align-items: center;
@@ -403,13 +405,7 @@ body {
     justify-content: flex-end;
     overflow: hidden;
     min-width: 0;
-    flex: 1 1 0;
-}
-.topbar-status {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex: 0 0 auto;
+    flex: 1 1 0 !important;
 }
 .back-btn {
     width: 36px;
@@ -444,6 +440,9 @@ body {
     padding: 2px 8px;
     border-radius: 50px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
 }
 .pulse-dot {
     width: 8px;
