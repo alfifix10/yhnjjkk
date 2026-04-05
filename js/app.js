@@ -198,21 +198,42 @@ var bellKnownUsers = new Set();
 var bellInitialized = false;
 
 function toggleBell() {
-    bellEnabled = !bellEnabled;
-    try { localStorage.setItem('jiranak_bell', bellEnabled ? 'on' : 'off'); } catch(e) {}
-    var btn = document.getElementById('bellToggle');
-    if (btn) btn.textContent = bellEnabled ? '🔔' : '🔕';
-    if (bellEnabled && 'Notification' in window) {
-        if (Notification.permission === 'default') {
-            Notification.requestPermission();
-        } else if (Notification.permission === 'denied') {
+    if (!bellEnabled) {
+        // تفعيل الجرس
+        if ('Notification' in window && Notification.permission === 'denied') {
             showModal({
                 title: '🔔 الإشعارات محظورة',
-                message: 'فعّل الإشعارات من إعدادات المتصفح لهذا الموقع حتى تصلك التنبيهات.\n\nالصوت والاهتزاز سيعملان بشكل طبيعي.',
-                buttons: [{ text: 'حسناً', cls: 'modal-btn-primary', action: function(){} }]
+                message: 'فعّل الإشعارات من إعدادات المتصفح لهذا الموقع.\n\nالصوت والاهتزاز سيعملان بشكل طبيعي.',
+                buttons: [{ text: 'فهمت، فعّل الجرس', cls: 'modal-btn-primary', action: function() { enableBell(); } }]
             });
+        } else if ('Notification' in window && Notification.permission === 'default') {
+            showModal({
+                title: '🔔 تنبيه الجيران',
+                message: 'عند تفعيل الجرس سنرسل لك تنبيه بصوت واهتزاز وإشعار عندما يدخل شخص قريب منك.',
+                buttons: [
+                    { text: 'فعّل مع الإشعارات', cls: 'modal-btn-primary', action: function() {
+                        Notification.requestPermission().then(function() { enableBell(); });
+                    }},
+                    { text: 'صوت واهتزاز فقط', cls: 'modal-btn-cancel', action: function() { enableBell(); } }
+                ]
+            });
+        } else {
+            enableBell();
         }
+    } else {
+        // إيقاف الجرس
+        bellEnabled = false;
+        try { localStorage.setItem('jiranak_bell', 'off'); } catch(e) {}
+        var btn = document.getElementById('bellToggle');
+        if (btn) btn.textContent = '🔕';
     }
+}
+
+function enableBell() {
+    bellEnabled = true;
+    try { localStorage.setItem('jiranak_bell', 'on'); } catch(e) {}
+    var btn = document.getElementById('bellToggle');
+    if (btn) btn.textContent = '🔔';
 }
 
 function playBellSound() {
