@@ -226,6 +226,7 @@ function toggleBell() {
         try { localStorage.setItem('jiranak_bell', 'off'); } catch(e) {}
         var btn = document.getElementById('bellToggle');
         if (btn) btn.textContent = '🔕';
+        showToast('🔕 تم إيقاف التنبيهات');
     }
 }
 
@@ -234,6 +235,7 @@ function enableBell() {
     try { localStorage.setItem('jiranak_bell', 'on'); } catch(e) {}
     var btn = document.getElementById('bellToggle');
     if (btn) btn.textContent = '🔔';
+    showToast('🔔 سيتم تنبيهك عند دخول جار قريب');
 }
 
 function playBellSound() {
@@ -296,11 +298,22 @@ function checkBellAlert(onlineData) {
     bellKnownUsers = nearbyNow;
 }
 
+function showToast(text) {
+    var old = document.querySelector('.btn-toast');
+    if (old) old.remove();
+    var t = document.createElement('div');
+    t.className = 'btn-toast';
+    t.textContent = text;
+    document.body.appendChild(t);
+    setTimeout(function() { t.remove(); }, 2000);
+}
+
 function toggleSound() {
     soundEnabled = !soundEnabled;
     try { localStorage.setItem('jiranak_sound', soundEnabled ? 'on' : 'off'); } catch(e) {}
     var btn = document.getElementById('soundToggle');
     if (btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
+    showToast(soundEnabled ? 'صوت الرسائل مفعّل' : 'صوت الرسائل مكتوم');
 }
 
 function playNotif() {

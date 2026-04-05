@@ -419,6 +419,28 @@ body {
     transition: var(--transition);
 }
 .back-btn:hover { background: rgba(255,255,255,0.1); }
+.btn-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: 'Cairo', sans-serif;
+    z-index: 999;
+    pointer-events: none;
+    animation: toastFade 2s ease forwards;
+    white-space: nowrap;
+}
+@keyframes toastFade {
+    0% { opacity:0; transform:translateX(-50%) translateY(10px); }
+    15% { opacity:1; transform:translateX(-50%) translateY(0); }
+    80% { opacity:1; }
+    100% { opacity:0; }
+}
 .my-name {
     font-weight: 700;
     font-size: 17px;
