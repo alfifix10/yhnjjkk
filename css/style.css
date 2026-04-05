@@ -422,14 +422,16 @@ body {
 }
 .back-btn:hover { background: rgba(255,255,255,0.1); }
 .my-name {
+    display: block;
     font-weight: 700;
     font-size: 15px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    direction: rtl;
+    min-width: 0;
 }
 .online-badge {
+    display: inline-block;
     font-size: 10px;
     color: var(--accent);
     font-weight: 600;
@@ -439,7 +441,8 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: 110px;
+    vertical-align: middle;
 }
 .pulse-dot {
     width: 8px;
