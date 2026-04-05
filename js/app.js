@@ -419,17 +419,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         var savedName = localStorage.getItem('jiranak_name');
         if (savedName) {
-            // التحقق من الحظر قبل الدخول التلقائي (بالـ ID + البصمة)
-            checkBanned(function(isBanned) {
-                if (isBanned) {
-                    localStorage.removeItem('jiranak_name');
-                    initLanding();
-                    showBannedMessage();
-                } else {
-                    myName = savedName;
-                    enterPeopleScreen();
-                }
-            });
+            myName = savedName;
+            enterPeopleScreen();
         } else {
             initLanding();
         }
