@@ -393,27 +393,33 @@ body {
     border-bottom: 1px solid var(--glass-border);
     z-index: 20;
     flex-shrink: 0;
-    gap: 8px;
+    gap: 6px;
     min-height: 50px;
+    flex-wrap: wrap;
 }
 .topbar-right {
     display: flex;
     align-items: center;
     gap: 4px;
     min-width: 0;
-    flex-shrink: 1;
+    flex: 1 1 auto;
+    overflow: hidden;
 }
 .topbar-center {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-shrink: 0;
+    flex: 0 0 auto;
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    padding-top: 2px;
 }
 .topbar-left {
     display: flex;
     align-items: center;
     gap: 4px;
-    flex-shrink: 0;
+    flex: 0 0 auto;
 }
 .topbar-icon-btn {
     background: none;
@@ -423,6 +429,10 @@ body {
     padding: 4px;
     border-radius: 6px;
     line-height: 1;
+}
+@media(min-width:500px) {
+    .topbar { flex-wrap: nowrap; }
+    .topbar-center { order: 0; width: auto; padding-top: 0; }
 }
 .back-btn {
     width: 36px;
@@ -441,11 +451,10 @@ body {
 .back-btn:hover { background: rgba(255,255,255,0.1); }
 .my-name {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 80px;
 }
 .online-badge {
     font-size: 10px;
