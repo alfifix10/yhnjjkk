@@ -80,12 +80,16 @@ function checkBanned(callback) {
     if (!db) return callback(false);
     var done = false;
     function finish(val) { if (!done) { done = true; callback(val); } }
-    db.ref('banned/' + myId).once('value').then(function(snap1) {
-        if (snap1.exists()) return finish(true);
-        db.ref('banned/' + myFingerprint).once('value').then(function(snap2) {
-            finish(snap2.exists());
+    // timeout 3 ثواني — لو Firebase ما رد نسمح بالدخول
+    setTimeout(function() { finish(false); }, 3000);
+    try {
+        db.ref('banned/' + myId).once('value').then(function(snap1) {
+            if (snap1.exists()) return finish(true);
+            db.ref('banned/' + myFingerprint).once('value').then(function(snap2) {
+                finish(snap2.exists());
+            }).catch(function() { finish(false); });
         }).catch(function() { finish(false); });
-    }).catch(function() { finish(false); });
+    } catch(e) { finish(false); }
 }
 var myName = '';
 var myLat = 0;
