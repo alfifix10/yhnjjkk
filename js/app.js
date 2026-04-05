@@ -185,6 +185,12 @@ function roundCoord(val) {
 }
 
 const MAX_HISTORY_PER_USER = 100;
+const MAX_NEARBY_KM = 100;       // أقصى مسافة لعرض الجيران والتنبيهات
+const GPS_MIN_ACCURACY = 200;    // أقل دقة GPS مقبولة (متر)
+const GPS_MAX_JUMP_KM = 50;      // أقصى قفزة GPS مقبولة (كم)
+const MSG_COOLDOWN_MS = 500;     // الحد الأدنى بين كل رسالة (مللي ثانية)
+const MSG_PER_MINUTE = 20;       // أقصى عدد رسائل بالدقيقة
+const HEARTBEAT_MS = 60000;      // فترة تحديث الحضور (مللي ثانية)
 
 let _audioCtx = null;
 function getAudioContext() {
@@ -288,7 +294,7 @@ function checkBellAlert(onlineData) {
         var id = entry[0], u = entry[1];
         if (id === myId || !u.lat || !u.lng) return;
         var dist = getDistance(u.lat, u.lng);
-        if (dist <= 100) nearbyNow.add(id);
+        if (dist <= MAX_NEARBY_KM) nearbyNow.add(id);
     });
     // أول مرة — نحفظ القائمة بدون إشعار
     if (!bellInitialized) {
@@ -514,7 +520,7 @@ function requestLocation() {
             var accuracy = pos.coords.accuracy || 99999;
             myGpsAccuracy = accuracy;
             // نحفظ الإحداثيات فقط لو دقيقة
-            if (accuracy < 200) {
+            if (accuracy < GPS_MIN_ACCURACY) {
                 myLat = pos.coords.latitude;
                 myLng = pos.coords.longitude;
                 myGpsReady = true;
@@ -544,12 +550,12 @@ function startGeoWatch() {
             myGpsAccuracy = accuracy;
 
             // نقبل الموقع فقط لو الدقة أقل من 200 متر (GPS حقيقي)
-            if (accuracy > 200) return;
+            if (accuracy > GPS_MIN_ACCURACY) return;
 
             // كشف قفزة مريبة
             if (myLat !== 0 && myLng !== 0) {
                 var jump = getDistance(newLat, newLng);
-                if (jump > 50) return;
+                if (jump > GPS_MAX_JUMP_KM) return;
             }
 
             myLat = newLat;
@@ -659,7 +665,7 @@ function enterPeopleScreen() {
     // [FIX 2] heartbeat واحد فقط
     heartbeatInterval = setInterval(() => {
         if (myPresenceRef) myPresenceRef.update({ t: firebase.database.ServerValue.TIMESTAMP });
-    }, 60000);
+    }, HEARTBEAT_MS);
 
     // بناء قائمة المتصلين بـ child events بدل value (أداء أفضل)
     var onlineData = {};
@@ -817,7 +823,7 @@ function renderPeopleFromData(data) {
         return;
     } else {
         // فلتر: أبعد شخص معروض لازم يكون ضمن 100 كم
-        var nearby = allUsers.filter(function(u) { return u._dist <= 100; });
+        var nearby = allUsers.filter(function(u) { return u._dist <= MAX_NEARBY_KM; });
         users = nearby.slice(0, maxShow);
     }
 
@@ -984,18 +990,18 @@ function startChat(userId, userName, uLat, uLng) {
         if (!text || text.length > 500) return;
         var now = Date.now();
         // حد 500ms بين كل رسالة
-        if (now - lastMsgTime < 500) {
+        if (now - lastMsgTime < MSG_COOLDOWN_MS) {
             sendBtn.style.opacity = '0.5';
             setTimeout(function() { sendBtn.style.opacity = '1'; }, 300);
             return;
         }
         // حد 20 رسالة بالدقيقة
-        if (now - minuteStart > 60000) {
+        if (now - minuteStart > HEARTBEAT_MS) {
             msgsSentInMinute = 0;
             minuteStart = now;
         }
         msgsSentInMinute++;
-        if (msgsSentInMinute > 20) {
+        if (msgsSentInMinute > MSG_PER_MINUTE) {
             addSystemMsg('⚠️ أرسلت رسائل كثيرة، انتظر قليلاً');
             return;
         }
