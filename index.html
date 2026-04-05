@@ -102,14 +102,17 @@
     </div>
     <div id="peopleScreen" class="screen">
         <div class="topbar">
-            <div class="topbar-info">
+            <div class="topbar-right">
                 <span id="myName" class="my-name"></span>
                 <button id="editNameBtn" class="edit-name-btn" title="تعديل الاسم">✏️</button>
+            </div>
+            <div class="topbar-center">
                 <span id="onlineCount" class="online-badge">0 جار متصل</span>
                 <div class="pulse-dot"></div>
             </div>
-            <div style="display:flex;gap:6px">
-                <button id="soundToggle" onclick="toggleSound()" style="background:none;border:none;font-size:18px;cursor:pointer" title="كتم/تفعيل الصوت">🔊</button>
+            <div class="topbar-left">
+                <button id="soundToggle" onclick="toggleSound()" class="topbar-icon-btn" title="كتم/تفعيل الصوت">🔊</button>
+                <button id="shareBtn" class="topbar-icon-btn" title="مشاركة">📤</button>
                 <button id="backToLanding" class="back-btn" title="رجوع">↩</button>
             </div>
         </div>
@@ -127,7 +130,7 @@
                     <div class="empty-icon">👀</div>
                     <p>ما فيه أحد متصل الآن</p>
                     <p class="hint">شارك الرابط مع أصدقائك!</p>
-                    <button id="shareBtn" class="btn-secondary">📤 شارك الرابط</button>
+                    <button onclick="shareLink()" class="btn-secondary">📤 شارك الرابط</button>
                 </div>
             </div>
         </div>
