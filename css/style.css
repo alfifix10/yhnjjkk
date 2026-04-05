@@ -421,7 +421,7 @@ body {
 .back-btn:hover { background: rgba(255,255,255,0.1); }
 .btn-toast {
     position: fixed;
-    bottom: 80px;
+    top: 70px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0,0,0,0.85);
@@ -436,7 +436,7 @@ body {
     white-space: nowrap;
 }
 @keyframes toastFade {
-    0% { opacity:0; transform:translateX(-50%) translateY(10px); }
+    0% { opacity:0; transform:translateX(-50%) translateY(-10px); }
     15% { opacity:1; transform:translateX(-50%) translateY(0); }
     80% { opacity:1; }
     100% { opacity:0; }
