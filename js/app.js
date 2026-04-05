@@ -202,9 +202,16 @@ function toggleBell() {
     try { localStorage.setItem('jiranak_bell', bellEnabled ? 'on' : 'off'); } catch(e) {}
     var btn = document.getElementById('bellToggle');
     if (btn) btn.textContent = bellEnabled ? '🔔' : '🔕';
-    // طلب إذن الإشعارات
-    if (bellEnabled && 'Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
+    if (bellEnabled && 'Notification' in window) {
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        } else if (Notification.permission === 'denied') {
+            showModal({
+                title: '🔔 الإشعارات محظورة',
+                message: 'فعّل الإشعارات من إعدادات المتصفح لهذا الموقع حتى تصلك التنبيهات.\n\nالصوت والاهتزاز سيعملان بشكل طبيعي.',
+                buttons: [{ text: 'حسناً', cls: 'modal-btn-primary', action: function(){} }]
+            });
+        }
     }
 }
 
